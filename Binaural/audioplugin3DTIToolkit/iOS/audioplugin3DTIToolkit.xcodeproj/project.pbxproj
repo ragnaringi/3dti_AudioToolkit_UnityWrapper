@@ -402,7 +402,7 @@
 				34856A5526FE2131004CEFE8 /* ILD */,
 			);
 			name = 3DTI_Toolkit_Modules;
-			path = ../../3DTI_Toolkit_Modules;
+			path = ../../../3dti_AudioToolkit/3dti_ResourceManager;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

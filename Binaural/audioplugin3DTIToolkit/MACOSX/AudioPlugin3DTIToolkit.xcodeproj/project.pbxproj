@@ -320,7 +320,6 @@
 		34BB9EE927025200005BF419 /* SpatializerCore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SpatializerCore.cpp; path = ../src/SpatializerCore.cpp; sourceTree = "<group>"; };
 		34BB9EEA27025200005BF419 /* effect3DTISpatializerReverb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = effect3DTISpatializerReverb.h; path = ../src/effect3DTISpatializerReverb.h; sourceTree = "<group>"; };
 		34BB9EEB27025200005BF419 /* SpatializerCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SpatializerCore.h; path = ../src/SpatializerCore.h; sourceTree = "<group>"; };
-		34CA3BCD2A8CFF31006AEBCE /* AudioPlugin3DTIToolkit copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "AudioPlugin3DTIToolkit copy-Info.plist"; path = "/Users/timmb/dev/3dti_AudioToolkit_UnityWrapper/Binaural/audioplugin3DTIToolkit/MACOSX/AudioPlugin3DTIToolkit copy-Info.plist"; sourceTree = "<absolute>"; };
 		34FEE2D526FCBF420094E18F /* effect3DTISpatializerSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = effect3DTISpatializerSource.h; path = ../src/effect3DTISpatializerSource.h; sourceTree = "<group>"; };
 		34FEE2D726FCBF420094E18F /* effect3DTISpatializerSource.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = effect3DTISpatializerSource.cpp; path = ../src/effect3DTISpatializerSource.cpp; sourceTree = "<group>"; };
 		34FEE2DB26FCBF9E0094E18F /* HRTFFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HRTFFactory.cpp; sourceTree = "<group>"; };
@@ -540,15 +539,15 @@
 			name = src;
 			sourceTree = "<group>";
 		};
-		AFD67CB01E978F80000F4387 /* 3DTI_Toolkit_Core */ = {
+		AFD67CB01E978F80000F4387 /* 3dti_Toolkit */ = {
 			isa = PBXGroup;
 			children = (
 				AFD67CB21E978F80000F4387 /* BinauralSpatializer */,
 				AFD67CC61E978F80000F4387 /* Common */,
 				AFD67CEF1E978F80000F4387 /* HAHLSimulation */,
 			);
-			name = 3DTI_Toolkit_Core;
-			path = ../../3DTI_Toolkit_Core;
+			name = 3dti_Toolkit;
+			path = ../../../3dti_AudioToolkit/3dti_Toolkit;
 			sourceTree = "<group>";
 		};
 		AFD67CB21E978F80000F4387 /* BinauralSpatializer */ = {
@@ -667,7 +666,7 @@
 		AFE883761DCCA8F6003505EF = {
 			isa = PBXGroup;
 			children = (
-				AFD67CB01E978F80000F4387 /* 3DTI_Toolkit_Core */,
+				AFD67CB01E978F80000F4387 /* 3dti_Toolkit */,
 				AF391F881E55F12800EB4AC6 /* AudioPlugin3DTIToolkit */,
 				AF6FAA481E3A16140035B40E /* src */,
 				AFE88A331DCCB223003505EF /* 3DTI_Toolkit_Modules */,
@@ -675,7 +674,6 @@
 				AF766FEE1DE9F99C0003ED20 /* Config.Debug.xcconfig */,
 				AFE889EC1DCCAC7E003505EF /* Config.Release.xcconfig */,
 				AFE883801DCCA8F6003505EF /* Products */,
-				34CA3BCD2A8CFF31006AEBCE /* AudioPlugin3DTIToolkit copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -696,7 +694,7 @@
 				3429A3BD26384B5500964E9E /* sofa */,
 			);
 			name = 3DTI_Toolkit_Modules;
-			path = ../../3DTI_Toolkit_Modules;
+			path = ../../../3dti_AudioToolkit/3dti_ResourceManager;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
