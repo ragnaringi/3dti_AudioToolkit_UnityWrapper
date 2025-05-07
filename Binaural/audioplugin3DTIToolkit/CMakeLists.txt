@@ -1,17 +1,18 @@
+# cmake -DCMAKE_BUILD_TYPE=Release -B build
+# cmake --build build
+
 cmake_minimum_required(VERSION 3.15)
-project(UnityPlugin LANGUAGES C CXX)
+project(AudioPlugin3DTIToolkit LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) 
-
 set(LIB_TYPE MODULE)
-# Set export macro based on platform
+
 if(WIN32)
     add_definitions(-DPLUGIN_EXPORT=__declspec(dllexport))
 else()
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum OS X deployment version" FORCE)
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         set(LIB_TYPE STATIC)
     endif()
@@ -30,7 +31,10 @@ file(GLOB_RECURSE PROJECT_SRC CONFIGURE_DEPENDS src/*.cpp src/*.h)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" PREFIX "src" FILES ${PROJECT_SRC})
 
 # Collect third-party sources
-file(GLOB_RECURSE 3DTI_TOOLKIT "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit/*.h")
+file(GLOB_RECURSE 3DTI_TOOLKIT 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit/*.h"
+)
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit" PREFIX "3dti_Toolkit" FILES ${3DTI_TOOLKIT})
 
 file(GLOB_RECURSE 3DTI_MODULES 
@@ -41,28 +45,42 @@ file(GLOB_RECURSE 3DTI_MODULES
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/ILD/*.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/ILD/*.h"
 )
+if(NOT WINDOWS)
+    foreach(file ${3DTI_MODULES})
+        if(file MATCHES ".*Factory\\.(cpp|h)$")
+            list(REMOVE_ITEM 3DTI_MODULES ${file})
+        endif()
+    endforeach()
+endif()
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager" PREFIX "3dti_Modules" FILES ${3DTI_MODULES})
 
-file(GLOB_RECURSE SOFA 
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src/*.cpp" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src/*.h"
-)
-foreach(file ${SOFA})
-    get_filename_component(fname ${file} NAME)
-    if(NOT fname MATCHES "^SOFA")
-        list(REMOVE_ITEM SOFA ${file})
-    endif()
-endforeach()
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src" PREFIX "SOFA" FILES ${SOFA})
+# Only add SOFA files for non Apple platforms
+if(WINDOWS)
+    file(GLOB_RECURSE SOFA 
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src/*.cpp" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src/*.h"
+    )
+    foreach(file ${SOFA})
+        get_filename_component(fname ${file} NAME)
+        if(NOT fname MATCHES "^SOFA")
+            list(REMOVE_ITEM SOFA ${file})
+        endif()
+    endforeach()
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src" PREFIX "SOFA" FILES ${SOFA})
 
-file(GLOB_RECURSE NETCDF
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include/*.cpp" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include/*.h"
-)
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include" PREFIX "netcdf" FILES ${NETCDF})
+    file(GLOB_RECURSE NETCDF
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include/*.cpp" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include/*.h"
+    )
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include" PREFIX "netcdf" FILES ${NETCDF})
+
+    # Link library depenencies
+    file(GLOB LIBS "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/lib/win/*.lib")
+    target_link_libraries(AudioPlugin3DTIToolkit PUBLIC ${STATIC_LIBS})
+endif()
 
 # Add library
-add_library(UnityPlugin ${LIB_TYPE}
+add_library(AudioPlugin3DTIToolkit ${LIB_TYPE}
     ${PROJECT_SRC}
     ${3DTI_TOOLKIT}
     ${3DTI_MODULES}
@@ -70,7 +88,7 @@ add_library(UnityPlugin ${LIB_TYPE}
     ${NETCDF}
 )
 
-target_include_directories(UnityPlugin PUBLIC 
+target_include_directories(AudioPlugin3DTIToolkit PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager"
@@ -80,17 +98,25 @@ target_include_directories(UnityPlugin PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include"
 )
 
-# Link static library depenencies
-file(GLOB STATIC_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/lib/macos/*.a")
-target_link_libraries(UnityPlugin PRIVATE ${STATIC_LIBS})
+target_compile_definitions(AudioPlugin3DTIToolkit PRIVATE
+    _3DTI_AXIS_CONVENTION_UNITY
+    _3DTI_ANGLE_CONVENTION_LISTEN
+
+    # Platform-specific macros
+    $<$<PLATFORM_ID:Windows>:>
+    $<$<PLATFORM_ID:Darwin>:DISABLE_SOFA_SUPPORT>
+    $<$<PLATFORM_ID:Linux>:>
+    $<$<PLATFORM_ID:Android>:>
+    $<$<PLATFORM_ID:iOS>:DISABLE_SOFA_SUPPORT>
+)
 
 # macOS .bundle output
 message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set_target_properties(UnityPlugin PROPERTIES
-        XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES "SOFA* nc* HRTFFactory.cpp BRIRFactory.cpp"
+    set_target_properties(AudioPlugin3DTIToolkit PROPERTIES
         BUNDLE TRUE
         MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/MACOSX/AudioPlugin3DTIToolkit/Info.plist"
         SUFFIX ".bundle"
     )
 endif()
