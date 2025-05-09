@@ -194,6 +194,7 @@ namespace SpatializerReverb3DTI
 		}
 
 		// 7. Process reverb and generate the reverb output
+        /*
         if (spatializer->enableReverbProcessing && spatializer->isBinaryResourceLoaded[SpatializerCore3DTI::ReverbBRIR])
 		{
 			// assert(const_cast<CABIR&>(spatializer->environment->GetABIR()).IsInitialized());
@@ -214,11 +215,12 @@ namespace SpatializerReverb3DTI
 		}
 		else
 		{
-			for (size_t i = 0; i < (size_t) length * 2; i++)
-			{
-				outbuffer[i] = inbuffer[i];
-			}
-		}
+         */
+        for (size_t i = 0; i < (size_t) length * 2; i++)
+        {
+            outbuffer[i] = inbuffer[i];
+        }
+		// }
 
 		return UNITY_AUDIODSP_OK;
 
