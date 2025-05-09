@@ -1,20 +1,7 @@
+
 #include "SpatializerCore.h"
 #include "CommonUtils.h"
-#include "BRIR/BRIRCereal.h"
-#include "ILD/ILDCereal.h"
-
-using Common::T_ear;
-
-#if defined(__MACH__) || defined(__APPLE__)
-#include "TargetConditionals.h"
-#endif
-
-
-
-#ifdef ENABLE_SOFA_SUPPORT
-#include "HRTF/HRTFFactory.h"
-#include "BRIR/BRIRFactory.h"
-#endif
+#include "AppUtils.h"
 
 namespace SpatializerCore3DTI
 {
@@ -41,7 +28,6 @@ namespace SpatializerCore3DTI
 
 	extern "C" UNITY_AUDIODSP_EXPORT_API bool Set3DTISpatializerFloat(int parameter, float value)
 	{
-
 		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
 
 		SpatializerCore* spatializer = SpatializerCore::instance();
@@ -64,7 +50,10 @@ namespace SpatializerCore3DTI
 		return spatializer->GetFloat(parameter, value);
 	}
 
-
+    const std::string LISTENER_ID = "listener1";
+    const std::string LISTENER_HRTF_MODEL_ID = "listenerHRTF";
+    const std::string LISTENER_BRIR_MODEL_ID = "listenerAmbisonicBRIR";
+    const std::string SOUND_SOURCE_ID = "soundSource";
 
 	SpatializerCore::SpatializerCore(UInt32 sampleRate, UInt32 bufferSize)
 		: scaleFactor(1.0f)
@@ -77,19 +66,33 @@ namespace SpatializerCore3DTI
 		perSourceInitialValues[EnableNearFieldEffect] = 1.0f;
 		perSourceInitialValues[SpatializationMode] = 0.0f;
 
-		Common::TAudioStateStruct audioState;
-		audioState.sampleRate = sampleRate;
-		audioState.bufferSize = bufferSize;
-		core.SetAudioState(audioState);
-		listener = core.CreateListener();
-
 		const float LimiterThreshold = -30.0f;
 		const float LimiterAttack = 500.0f;
 		const float LimiterRelease = 500.0f;
 		const float LimiterRatio = 6;
-		limiter.Setup(sampleRate, LimiterRatio, LimiterThreshold, LimiterAttack, LimiterRelease);
+		// limiter.Setup(sampleRate, LimiterRatio, LimiterThreshold, LimiterAttack, LimiterRelease);
+        
+        globalParameters.SetSampleRate (sampleRate);
+        globalParameters.SetBufferSize (bufferSize);
+        
+        brtManager.BeginSetup();
+        listener = brtManager.CreateListener<BRTBase::CListener> (LISTENER_ID);
+        
+        listenerHRTFModel = brtManager.CreateListenerModel<BRTListenerModel::CListenerHRTFModel> (LISTENER_HRTF_MODEL_ID);
+        if (listenerHRTFModel == nullptr)
+            WriteLog ("BRT: Error creating listener model");
+    
+        if (! listener->ConnectListenerModel (LISTENER_HRTF_MODEL_ID))
+            WriteLog ("BRT: Error connecting listener model");
 
-		environment = core.CreateEnvironment();
+        listenerBRIRModel = brtManager.CreateListenerModel<BRTListenerModel::CListenerAmbisonicEnvironmentBRIRModel> (LISTENER_BRIR_MODEL_ID);
+        if (listenerBRIRModel == nullptr)
+            WriteLog ("BRT: Error creating listener model");
+       
+        if (! listener->ConnectListenerModel (LISTENER_BRIR_MODEL_ID))
+            WriteLog ("BRT: Error connecting listener model");
+                    
+        brtManager.EndSetup();
 	}
 
 
@@ -99,48 +102,68 @@ namespace SpatializerCore3DTI
 		instancePtr() = nullptr;
 	}
 
-
-
-
-	bool SpatializerCore::loadBinary(BinaryRole role, std::string path)
+	bool SpatializerCore::loadBinary (BinaryRole role, std::string path)
 	{
-		const string sofaExtension = ".sofa"s;
+		const std::string sofaExtension = ".sofa";
 		const bool hasSofaExtension = path.size() >= sofaExtension.size() && path.substr(path.size() - sofaExtension.size()) == sofaExtension;
 
+        WriteLog ("BRT: Loading binary of role " + std::to_string (role) + " : " + path);
+        
 		switch (role)
 		{
 		case HighQualityHRTF:
-#ifdef ENABLE_SOFA_SUPPORT
 			if (hasSofaExtension)
 			{
 				// We assume an ILD file holds the delays, so our SOFA file does not specify delays
-				bool specifiedDelays = false;
-				isBinaryResourceLoaded[HighQualityHRTF] = HRTF::CreateFromSofa(path, listener, specifiedDelays);
+				// bool specifiedDelays = false;
+				// isBinaryResourceLoaded[HighQualityHRTF] = HRTF::CreateFromSofa(path, listener, specifiedDelays);
+                // Load HRTF
+                auto hrtf = std::make_shared<BRTServices::CHRTF>();
+                bool sofaHRTFLoaded = AppUtils::LoadHRTFSofaFile (path, hrtf);
+                // Set one for the listener. We can change it at runtime
+                if (sofaHRTFLoaded)
+                {
+                    WriteLog ("BRT: SOFA HRTF loaded. Setting on listener");
+                    isBinaryResourceLoaded[HighQualityHRTF] = listener->SetHRTF (hrtf);
+                }
 			}
-			// If not sofa file then assume its a 3dti-hrtf file
-			else
-#endif
+			else // If not sofa file then assume its a 3dti-hrtf file
 			{
-				isBinaryResourceLoaded[HighQualityHRTF] = HRTF::CreateFrom3dti(path, listener);
+				// isBinaryResourceLoaded[HighQualityHRTF] = HRTF::CreateFrom3dti(path, listener);
 			}
 			return isBinaryResourceLoaded[HighQualityHRTF];
 		case HighQualityILD:
-			isBinaryResourceLoaded[HighQualityILD] = ILD::CreateFrom3dti_ILDNearFieldEffectTable(path, listener);
-			return isBinaryResourceLoaded[HighQualityILD];
+            {
+                // isBinaryResourceLoaded[HighQualityILD] = ILD::CreateFrom3dti_ILDNearFieldEffectTable(path, listener);
+                auto sosFilter = std::make_shared<BRTServices::CSOSFilters>();
+                bool nearFieldFilterLoaded = AppUtils::LoadNearFieldSOSFilter (path, sosFilter);
+                
+                if (nearFieldFilterLoaded)
+                {
+                    WriteLog ("BRT: SOFA NEAR FIELD ILD loaded. Setting on listener");
+                    isBinaryResourceLoaded[HighQualityILD] = listener->SetNearFieldCompensationFilters (sosFilter);
+                }
+                
+                return isBinaryResourceLoaded[HighQualityILD];
+            }
 		case HighPerformanceILD:
-			isBinaryResourceLoaded[HighPerformanceILD] = ILD::CreateFrom3dti_ILDSpatializationTable(path, listener);
+			// isBinaryResourceLoaded[HighPerformanceILD] = ILD::CreateFrom3dti_ILDSpatializationTable(path, listener);
 			return isBinaryResourceLoaded[HighPerformanceILD];
 		case ReverbBRIR:
-#ifdef ENABLE_SOFA_SUPPORT
 			if (hasSofaExtension)
 			{
-				isBinaryResourceLoaded[HighQualityHRTF] = BRIR::CreateFromSofa(path, environment);
+                // Load BRIR
+                auto brir = std::make_shared<BRTServices::CHRBRIR>();
+                bool brirSofaLoaded = AppUtils::LoadBRIRSofaFile (path, brir, 0,0,0,0);
+                if (brirSofaLoaded) {
+                    WriteLog ("BRT: SOFA BRIR loaded. Setting on listener");
+                    isBinaryResourceLoaded[ReverbBRIR] = listener->SetHRBRIR (brir);
+                }
 			}
-			// If not sofa file then assume its a 3dti-hrtf file
 			else
-#endif
 			{
-				isBinaryResourceLoaded[ReverbBRIR] = BRIR::CreateFrom3dti(path, environment);
+                // If not sofa file then assume its a 3dti-hrtf file
+				// isBinaryResourceLoaded[ReverbBRIR] = BRIR::CreateFrom3dti(path, environment);
 			}
 			return isBinaryResourceLoaded[ReverbBRIR];
 		default:
@@ -167,7 +190,7 @@ namespace SpatializerCore3DTI
 			const float min = 0.0f;
 			const float max = 1e20f;
 			//const float def = 0.0875f;
-			listener->SetHeadRadius(clamp(value, min, max));
+//			listener->SetHeadRadius(clamp(value, min, max));
 			return true;
 		}
 		case ScaleFactor:
@@ -182,11 +205,11 @@ namespace SpatializerCore3DTI
 		{
 			if (value == 0.0f)
 			{
-				listener->DisableCustomizedITD();
+//				listener->DisableCustomizedITD();
 			}
 			else
 			{
-				listener->EnableCustomizedITD();
+//				listener->EnableCustomizedITD();
 			}
 			return true;
 		}
@@ -194,50 +217,50 @@ namespace SpatializerCore3DTI
 		{
 			const float min = -30.0f;
 			const float max = 0.0f;
-			Common::CMagnitudes magnitudes = core.GetMagnitudes();
-			magnitudes.SetAnechoicDistanceAttenuation(clamp(value, min, max));
-			core.SetMagnitudes(magnitudes);
+//			Common::CMagnitudes magnitudes = core.GetMagnitudes();
+//			magnitudes.SetAnechoicDistanceAttenuation(clamp(value, min, max));
+//			core.SetMagnitudes(magnitudes);
 			return true;
 		}
 		case ILDAttenuation:
 		{
 			const float min = 0.0f;
 			const float max = 30.0f;
-			listener->SetILDAttenutaion(clamp(value, min, max));
+//			listener->SetILDAttenutaion(clamp(value, min, max));
 			return true;
 		}
 		case SoundSpeed:
 		{
 			const float min = 10.0f;
 			const float max = 1000.0f;
-			Common::CMagnitudes magnitudes = core.GetMagnitudes();
-			magnitudes.SetSoundSpeed(clamp(value, min, max));
-			core.SetMagnitudes(magnitudes);
+//			Common::CMagnitudes magnitudes = core.GetMagnitudes();
+//			magnitudes.SetSoundSpeed(clamp(value, min, max));
+//			core.SetMagnitudes(magnitudes);
 			return true;
 		}
 		case HearingAidDirectionalityAttenuationLeft:
 		{
 			const float min = 0.0f;
 			const float max = 30.0f;
-			listener->SetDirectionality_dB(Common::T_ear::LEFT, clamp(value, min, max));
+//			listener->SetDirectionality_dB(Common::T_ear::LEFT, clamp(value, min, max));
 			return true;
 		}
 		case HearingAidDirectionalityAttenuationRight:
 		{
 			const float min = 0.0f;
 			const float max = 30.0f;
-			listener->SetDirectionality_dB(Common::T_ear::RIGHT, clamp(value, min, max));
+//			listener->SetDirectionality_dB(Common::T_ear::RIGHT, clamp(value, min, max));
 			return true;
 		}
 		case EnableHearingAidDirectionalityLeft:
 		{
 			if (value == 0.0f)
 			{
-				listener->DisableDirectionality(Common::T_ear::LEFT);
+//				listener->DisableDirectionality(Common::T_ear::LEFT);
 			}
 			else
 			{
-				listener->EnableDirectionality(Common::T_ear::LEFT);
+//				listener->EnableDirectionality(Common::T_ear::LEFT);
 			}
 			return true;
 		}
@@ -245,11 +268,11 @@ namespace SpatializerCore3DTI
 		{
 			if (value == 0.0f)
 			{
-				listener->DisableDirectionality(Common::T_ear::RIGHT);
+//				listener->DisableDirectionality(Common::T_ear::RIGHT);
 			}
 			else
 			{
-				listener->EnableDirectionality(Common::T_ear::RIGHT);
+//				listener->EnableDirectionality(Common::T_ear::RIGHT);
 			}
 			return true;
 		}
@@ -262,39 +285,39 @@ namespace SpatializerCore3DTI
 		{
 			const float min = 1.0f;
 			const float max = 90.0f;
-			core.SetHRTFResamplingStep((int)clamp(value, min, max));
+//			core.SetHRTFResamplingStep((int)clamp(value, min, max));
 			return true;
 		}
 		case EnableReverbProcessing:
 			enableReverbProcessing = value != 0.0f;
 			return true;
 		case ReverbOrder:
-			static_assert((float)ADIMENSIONAL == 0.0f && (float)BIDIMENSIONAL == 1.0f && (float)THREEDIMENSIONAL == 2.0f, "These values are assumed by this code and the correspond c# enumerations.");
-			if (value == (float)ADIMENSIONAL)
-			{
-				environment->SetReverberationOrder(ADIMENSIONAL);
-			}
-			else if (value == (float)BIDIMENSIONAL)
-			{
-				environment->SetReverberationOrder(BIDIMENSIONAL);
-			}
-			else if (value == (float)THREEDIMENSIONAL)
-			{
-				environment->SetReverberationOrder(THREEDIMENSIONAL);
-			}
-			else
-			{
-				WriteLog("ERROR: Set3DTISpatializerFloat with parameter ReverbOrder only supports values 0.0, 1.0 and 2.0. Value received: " + to_string(value));
-				return false;
-			}
+//			static_assert((float)ADIMENSIONAL == 0.0f && (float)BIDIMENSIONAL == 1.0f && (float)THREEDIMENSIONAL == 2.0f, "These values are assumed by this code and the correspond c# enumerations.");
+//			if (value == (float)ADIMENSIONAL)
+//			{
+//				environment->SetReverberationOrder(ADIMENSIONAL);
+//			}
+//			else if (value == (float)BIDIMENSIONAL)
+//			{
+//				environment->SetReverberationOrder(BIDIMENSIONAL);
+//			}
+//			else if (value == (float)THREEDIMENSIONAL)
+//			{
+//				environment->SetReverberationOrder(THREEDIMENSIONAL);
+//			}
+//			else
+//			{
+//				WriteLog("ERROR: Set3DTISpatializerFloat with parameter ReverbOrder only supports values 0.0, 1.0 and 2.0. Value received: " + to_string(value));
+//				return false;
+//			}
 			return true;
 		case ReverbDistanceAttenuation:
 		{
 			const float min = -90.0f;
 			const float max = 0.0f;
-			Common::CMagnitudes magnitudes = core.GetMagnitudes();
-			magnitudes.SetReverbDistanceAttenuation(clamp(value, min, max));
-			core.SetMagnitudes(magnitudes);
+//			Common::CMagnitudes magnitudes = core.GetMagnitudes();
+//			magnitudes.SetReverbDistanceAttenuation(clamp(value, min, max));
+//			core.SetMagnitudes(magnitudes);
 			return true;
 		}
 		default:
@@ -323,60 +346,55 @@ namespace SpatializerCore3DTI
 			*value = perSourceInitialValues[parameter];
 			return true;
 		case HeadRadius:
-			*value = listener->GetHeadRadius();
+//			*value = listener->GetHeadRadius();
 			return true;
 		case ScaleFactor:
 			*value = scaleFactor;
 			return true;
 		case EnableCustomITD:
-			*value = listener->IsCustomizedITDEnabled() ? 1.0f : 0.0f;
+//			*value = listener->IsCustomizedITDEnabled() ? 1.0f : 0.0f;
 			return true;
 		case AnechoicDistanceAttenuation:
-			*value = core.GetMagnitudes().GetAnechoicDistanceAttenuation();
+//			*value = core.GetMagnitudes().GetAnechoicDistanceAttenuation();
 			return true;
 		case ILDAttenuation:
-			*value = listener->GetILDAttenutaion();
+//			*value = listener->GetILDAttenutaion();
 			return true;
 		case SoundSpeed:
-			*value = core.GetMagnitudes().GetSoundSpeed();
+//			*value = core.GetMagnitudes().GetSoundSpeed();
 			return true;
 		case HearingAidDirectionalityAttenuationLeft:
-			*value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::LEFT);
+//			*value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::LEFT);
 			return true;
 		case HearingAidDirectionalityAttenuationRight:
-			*value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::RIGHT);
+//			*value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::RIGHT);
 			return true;
 		case EnableHearingAidDirectionalityLeft:
-			*value = listener->IsDirectionalityEnabled(T_ear::LEFT);
+//			*value = listener->IsDirectionalityEnabled(T_ear::LEFT);
 			return true;
 		case EnableHearingAidDirectionalityRight:
-			*value = listener->IsDirectionalityEnabled(T_ear::RIGHT);
+//			*value = listener->IsDirectionalityEnabled(T_ear::RIGHT);
 			return true;
 		case EnableLimiter:
 			*value = isLimiterEnabled ? 1.0f : 0.0f;
 			return true;
 		case HRTFResamplingStep:
-			*value = (float)core.GetHRTFResamplingStep();
+//			*value = (float)core.GetHRTFResamplingStep();
 			return true;
 		case EnableReverbProcessing:
 			*value = (float)enableReverbProcessing;
 			return true;
 		case ReverbOrder:
-			*value = (float)environment->GetReverberationOrder();
+//			*value = (float)environment->GetReverberationOrder();
 			return true;
 		case ReverbDistanceAttenuation:
-			*value = core.GetMagnitudes().GetReverbDistanceAttenuation();
+//			*value = core.GetMagnitudes().GetReverbDistanceAttenuation();
 			return true;
 		default:
 			*value = std::numeric_limits<float>::quiet_NaN();
 			return false;
 		}
-
-
 	}
-
-
-
 
 	SpatializerCore* SpatializerCore::instance(UInt32 sampleRate, UInt32 bufferSize)
 	{
@@ -385,9 +403,9 @@ namespace SpatializerCore3DTI
 		{
 			s = new SpatializerCore(sampleRate, bufferSize);
 		}
-		if (s->core.GetAudioState().sampleRate != sampleRate ||s->core.GetAudioState().bufferSize != bufferSize)
+        if (s->globalParameters.GetSampleRate() != sampleRate ||s->globalParameters.GetBufferSize() != bufferSize)
 		{
-			throw IncorrectAudioStateException(sampleRate, bufferSize, s->core.GetAudioState().sampleRate, s->core.GetAudioState().bufferSize);
+            throw IncorrectAudioStateException(sampleRate, bufferSize, s->globalParameters.GetSampleRate(), s->globalParameters.GetBufferSize());
 		}
 		return s;
 	}
@@ -400,7 +418,7 @@ namespace SpatializerCore3DTI
 	bool SpatializerCore::resetInstanceIfNecessary(UInt32 sampleRate, UInt32 bufferSize)
 	{
 		SpatializerCore*& s = instancePtr();
-		if (s != nullptr && (s->core.GetAudioState().sampleRate != sampleRate || s->core.GetAudioState().bufferSize != bufferSize))
+        if (s != nullptr && (s->globalParameters.GetSampleRate() != sampleRate || s->globalParameters.GetBufferSize() != bufferSize))
 		{
 			delete s;
 			assert(s == nullptr); // this is done by the destructor
@@ -418,6 +436,5 @@ namespace SpatializerCore3DTI
 		static SpatializerCore* s = nullptr;
 		return s;
 	}
-
 
 }

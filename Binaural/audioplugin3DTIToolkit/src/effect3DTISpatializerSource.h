@@ -2,7 +2,6 @@
 #include "AudioPluginUtil.h"
 #include "SpatializerCore.h"
 
-
 namespace SpatializerSource3DTI
 {
 	// SpatializerCore Mutex must be locked when calling this

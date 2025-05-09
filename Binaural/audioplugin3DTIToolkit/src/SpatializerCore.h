@@ -1,23 +1,10 @@
 #pragma once
 
-// Tell the 3DTI Toolkit Core that we will be using the Unity axis convention!
-// WARNING: This define must be done before including Core.h!
-#define AXIS_CONVENTION UNITY
-
-#include "BinauralSpatializer/Core.h"
-#include "BinauralSpatializer/Listener.h"
-#include "BinauralSpatializer/Environment.h"
-#include "HRTF/HRTFCereal.h"
-#include "Common/DynamicCompressorStereo.h"
 #include <array>
+#include <cfloat>
+#include <mutex>
 #include "AudioPluginInterface.h"
-#include "CommonUtils.h"
-
-#ifndef DISABLE_SOFA_SUPPORT
-#if defined(UNITY_WIN) || (defined(TARGET_OS_OSX) && !defined(TARGET_OS_IOS))
-#define ENABLE_SOFA_SUPPORT
-#endif
-#endif
+#include "BRTLibrary.h"
 
 namespace SpatializerCore3DTI
 {
@@ -77,14 +64,18 @@ namespace SpatializerCore3DTI
 	struct SpatializerCore
 	{
 		// Each instance of the reverb effect has an instance of the Core
-		Binaural::CCore core;
-		std::shared_ptr<Binaural::CListener> listener;
-		std::shared_ptr<Binaural::CEnvironment> environment;
-		Common::CDynamicCompressorStereo limiter;
+        Common::CGlobalParameters globalParameters;                             // Class where the global BRT parameters are defined.
+        BRTBase::CBRTManager brtManager;                                        // BRT global manager interface
+        std::shared_ptr<BRTBase::CListener> listener;                           // Pointer to listener model
+        std::shared_ptr<BRTListenerModel::CListenerHRTFModel> listenerHRTFModel;
+        std::shared_ptr<BRTListenerModel::CListenerAmbisonicEnvironmentBRIRModel> listenerBRIRModel;
+        
 		std::array<float, NumSourceParameters> perSourceInitialValues;
 		float scaleFactor;
 		bool isLimiterEnabled;
 		bool enableReverbProcessing;
+        UInt32 numSoundSources = 0;
+        
 		// This mutex must be locked during any use of the spatializer instance, or in the creation/destruction of instances.
 		inline static std::mutex& mutex()
 		{

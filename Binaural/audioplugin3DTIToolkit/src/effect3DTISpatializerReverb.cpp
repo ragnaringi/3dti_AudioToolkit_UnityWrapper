@@ -31,19 +31,15 @@
 //#include "Common/AIR.h"
 //#include "effect3DTISpatializerSource.h"
 #include "SpatializerCore.h"
-
-#include "effect3DTISpatializerReverb.h"
 #include "CommonUtils.h"
 
 using namespace std;
 
 /////////////////////////////////////////////////////////////////////
 
-using namespace Binaural;
-using namespace Common;
-using namespace SpatializerCore3DTI;
-
-
+//using namespace Binaural;
+//using namespace Common;
+//using namespace SpatializerCore3DTI;
 
 namespace SpatializerReverb3DTI
 {
@@ -91,12 +87,12 @@ namespace SpatializerReverb3DTI
 			};
 			state->effectdata = effectdata;
 		}
-		catch (const SpatializerCore::IncorrectAudioStateException& e)
+        catch (const SpatializerCore3DTI::SpatializerCore::IncorrectAudioStateException& e)
 		{
 			WriteLog(e.what());
 			if (state->effectdata != nullptr)
 			{
-				delete state->effectdata;
+				delete static_cast<EffectData*> (state->effectdata);
 			}
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
@@ -120,10 +116,12 @@ namespace SpatializerReverb3DTI
 
 	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ReleaseCallback(UnityAudioEffectState* state)
 	{
-		EffectData* data = state->GetEffectData<EffectData>();
-		delete data;
+		if (EffectData* data = state->GetEffectData<EffectData>())
+            delete data;
+        
 		assert(doesReverbInstanceExist);
 		doesReverbInstanceExist = false;
+        
 		return UNITY_AUDIODSP_OK;
 	}
 
@@ -137,7 +135,7 @@ namespace SpatializerReverb3DTI
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
 		// As we need to lock the core spatializer mutex anyway during processing then we reuse it here
-		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
+        std::lock_guard<std::mutex> lock (SpatializerCore3DTI::SpatializerCore::mutex());
 		data->parameters[index] = value;
 		return UNITY_AUDIODSP_OK;
 	}
@@ -152,7 +150,7 @@ namespace SpatializerReverb3DTI
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
 		// As we need to lock spatializer mutex anyway during processing then we reuse it here
-		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
+        std::lock_guard<std::mutex> lock (SpatializerCore3DTI::SpatializerCore::mutex());
 		*value = data->parameters[index];
 		return UNITY_AUDIODSP_OK;
 	}
@@ -169,13 +167,14 @@ namespace SpatializerReverb3DTI
 	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ProcessCallback(UnityAudioEffectState* state, float* inbuffer, float* outbuffer, unsigned int length, int inchannels, int outchannels)
 	{	
 		EffectData* effectData = state->GetEffectData<EffectData>();
-		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
-		SpatializerCore* spatializer;
+        std::lock_guard<std::mutex> lock(SpatializerCore3DTI::SpatializerCore::mutex());
+		
+        SpatializerCore3DTI::SpatializerCore* spatializer;
 		try
 		{
-			spatializer = SpatializerCore::instance(state->samplerate, state->dspbuffersize);
+            spatializer = SpatializerCore3DTI::SpatializerCore::instance(state->samplerate, state->dspbuffersize);
 		}
-		catch (const SpatializerCore::IncorrectAudioStateException& e)
+        catch (const SpatializerCore3DTI::SpatializerCore::IncorrectAudioStateException& e)
 		{
 			WriteLog(std::string("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
@@ -186,7 +185,7 @@ namespace SpatializerReverb3DTI
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
 
-		const int bufferSize = spatializer->core.GetAudioState().bufferSize;
+        const int bufferSize = spatializer->globalParameters.GetBufferSize();
 
 		assert(bufferSize == length); // This should always be true as we test the audio state above
 		if (bufferSize != length)
@@ -195,15 +194,15 @@ namespace SpatializerReverb3DTI
 		}
 
 		// 7. Process reverb and generate the reverb output
-		if (spatializer->enableReverbProcessing != 0.0f && spatializer->isBinaryResourceLoaded[ReverbBRIR])
+        if (spatializer->enableReverbProcessing && spatializer->isBinaryResourceLoaded[SpatializerCore3DTI::ReverbBRIR])
 		{
-			assert(const_cast<CABIR&>(spatializer->environment->GetABIR()).IsInitialized());
+			// assert(const_cast<CABIR&>(spatializer->environment->GetABIR()).IsInitialized());
 
 			Common::CEarPair<CMonoBuffer<float>> bReverbOutput;
 			bReverbOutput.left.resize(bufferSize);
 			bReverbOutput.right.resize(bufferSize);
-			assert(bReverbOutput.left.size() == length && bReverbOutput.right.size() == length);
-			spatializer->environment->ProcessVirtualAmbisonicReverb(bReverbOutput.left, bReverbOutput.right);
+			// assert(bReverbOutput.left.size() == length && bReverbOutput.right.size() == length);
+			// spatializer->environment->ProcessVirtualAmbisonicReverb(bReverbOutput.left, bReverbOutput.right);
 
 			const float wet = clamp(effectData->parameters[Wetness], 0.0f, 1.0f);
 			const float dry = 1 - wet;

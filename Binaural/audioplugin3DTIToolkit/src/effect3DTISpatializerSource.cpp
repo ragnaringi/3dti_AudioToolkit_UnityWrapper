@@ -14,22 +14,12 @@
 **/
 
 #include "effect3DTISpatializerSource.h"
-
-//#include <BinauralSpatializer\3DTI_BinauralSpatializer.h>
-#include <Common/ErrorHandler.h>
-
-
 // Includes for debug logging
 #include <fstream>
 #include <iostream>
-
 #include <mutex>
-
 #include <sstream>
 #include <cstdint>
-
-//#include <HRTF/HRTFCereal.h>
-//#include <ILD/ILDCereal.h>
 
 enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOAD_END = 2, RESULT_LOAD_OK = 3, RESULT_LOAD_ERROR = -1 };
 
@@ -46,39 +36,32 @@ enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOA
 #include <sstream>
 #endif
 
-#include <cfloat>
-#include "HRTF/HRTFFactory.h"
+//#include "HRTF/HRTFFactory.h"
 #include "SpatializerCore.h"
 #include "CommonUtils.h"
+#include "BRTLibrary.h"
 
 /////////////////////////////////////////////////////////////////////
 
 namespace SpatializerSource3DTI
 {
-
-
 	using namespace SpatializerCore3DTI;
-
-
-
 
 	struct EffectData
 	{
-		int sourceID;    // DEBUG
-		std::shared_ptr<Binaural::CSingleSourceDSP> audioSource;
-		//SpatializerCore* spatializer;
+		std::string sourceID;    // DEBUG
+        std::shared_ptr<BRTSourceModel::CSourceSimpleModel> soundSource;
+        CMonoBuffer<float> inMonoBuffer;
+        CMonoBuffer<float> outLeftBuffer;
+        CMonoBuffer<float> outRightBuffer;
+        CStereoBuffer<float> outStereoBuffer;
 	};
 
-
-
 	template <class T>
-	void WriteLog(string logText, const T& value, int sourceID = -1)
+    void WriteLog(std::string logText, const T& value, std::string sourceID = "")
 	{
 		std::cerr << logText << " " << value;
-		if (sourceID >= 0)
-		{
-			std::cerr << " (source " << sourceID << ")";
-		}
+        std::cerr << " (source " << sourceID << ")";
 		std::cerr << std::endl;
 		//
 		//    if (spatializer().debugLog)
@@ -101,25 +84,17 @@ namespace SpatializerSource3DTI
 		//#endif
 	}
 
-
 template <class T>
-void WriteLog(UnityAudioEffectState* state, string logtext, const T& value)
+void WriteLog (UnityAudioEffectState* state, std::string logtext, const T& value)
 {
 	WriteLog(logtext, value, state->GetEffectData<EffectData>()->sourceID);
 }
 
-void WriteLog(string logtext)
+void WriteLog (std::string logtext)
 {
 	WriteLog(logtext, "");
 	//std::cerr << logtext << std::endl;
 }
-
-
-
-/////////////////////////////////////////////////////////////////////
-
-
-
 
 	/////////////////////////////////////////////////////////////////////
 
@@ -219,44 +194,6 @@ Common::CTransform ComputeSourceTransformFromMatrix(float* sourceMatrix, float s
 	return sourceTransform;
 }
 
-
-	/////////////////////////////////////////////////////////////////////
-
-void WriteLogHeader(UnityAudioEffectState* state)
-{
-	EffectData* data = state->GetEffectData<EffectData>();
-
-	std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
-
-	SpatializerCore* spatializer = SpatializerCore::instance();
-
-	if (spatializer == nullptr)
-	{
-		WriteLog(state, "CREATE: ERROR!!!! Spatializer has not bee instantiated!", "");
-	}
-	else
-	{
-		// Audio state:
-		Common::TAudioStateStruct audioState = spatializer->core.GetAudioState();
-		WriteLog(state, "CREATE: Sample rate set to ", audioState.sampleRate);
-		WriteLog(state, "CREATE: Buffer size set to ", audioState.bufferSize);
-		WriteLog(state, "CREATE: HRTF resampling step set to ", spatializer->core.GetHRTFResamplingStep());
-
-		// Listener:
-		if (spatializer->listener != nullptr)
-			WriteLog(state, "CREATE: Listener created successfully", "");
-		else
-			WriteLog(state, "CREATE: ERROR!!!! Listener creation returned null pointer!", "");
-	}
-	// Source:
-	if (data->audioSource != nullptr)
-		WriteLog(state, "CREATE: Source created successfully", "");
-	else
-		WriteLog(state, "CREATE: ERROR!!!! Source creation returned null pointer!", "");
-
-	WriteLog(state, "--------------------------------------", "\n");
-}
-
 /////////////////////////////////////////////////////////////////////
 // AUDIO PLUGIN SDK FUNCTIONS
 /////////////////////////////////////////////////////////////////////
@@ -269,7 +206,7 @@ static UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK DistanceAttenuationCallback
 
 /////////////////////////////////////////////////////////////////////
 
-UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback(UnityAudioEffectState* state)
+UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback (UnityAudioEffectState* state)
 {
 	if (!IsHostCompatible(state))
 	{
@@ -284,53 +221,97 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback(UnityAudioEffectSta
 	}
 	catch (const SpatializerCore::IncorrectAudioStateException& e)
 	{
-		WriteLog(std::string("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
+		WriteLog(std::string("Error: Spatialiser CreateCallback called with incorrect audio state. ") + e.what());
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 	}
+    
+    WriteLog ("BRT: Created Spatialiser Source");
 
 	// CREATE Instance state and grab parameters
 
 	EffectData* effectdata = new EffectData;
-	{
-		state->effectdata = effectdata;
-		state->spatializerdata->distanceattenuationcallback = DistanceAttenuationCallback;
-		effectdata->sourceID = -1;
-	}
+    effectdata->inMonoBuffer.resize (state->dspbuffersize);
+    effectdata->outLeftBuffer.resize (state->dspbuffersize);
+    effectdata->outRightBuffer.resize (state->dspbuffersize);
+    effectdata->outStereoBuffer.resize (state->dspbuffersize);
+    
+    // Create sound source
+    effectdata->sourceID = "SoundSource_" + std::to_string (spatializer->numSoundSources);
+    WriteLog ("BRT: Creating sound source: " + effectdata->sourceID);
+    
+    spatializer->brtManager.BeginSetup();
+    
+    effectdata->soundSource = spatializer->brtManager.CreateSoundSource<BRTSourceModel::CSourceSimpleModel> (effectdata->sourceID);
+    if (effectdata->soundSource == nullptr)
+        WriteLog ("BRT: Error creating sound source: " + effectdata->sourceID);
+    else
+        spatializer->numSoundSources++;
 
-	// Create source and set default interpolation method
-	effectdata->audioSource = spatializer->core.CreateSingleSourceDSP();
-	if (effectdata->audioSource != nullptr)
-	{
+    if (! spatializer->listenerHRTFModel->ConnectSoundSource (effectdata->sourceID))
+        WriteLog ("BRT: Error connecting sound source to HRTF model");
 
-		static_assert(std::tuple_size<decltype(SpatializerCore::perSourceInitialValues)>::value == FloatParameter::NumSourceParameters, "NumSourceParameters should match the size of SpatializerCore::perSourceInitialValues array.");
+    if (! spatializer->listenerBRIRModel->ConnectSoundSource (effectdata->sourceID))
+        WriteLog ("BRT: Error connecting sound source to BRIR model");
 
-		// Initialize with defaults
-		for (int i = FloatParameter::FirstSourceParameter; i < FloatParameter::NumSourceParameters; i++)
-		{
-			float value = 0;
-			bool valueReceived = spatializer->GetFloat(i, &value);
-			assert(valueReceived);
-			SetFloatParameter(spatializer, state, i, value);
-		}
-	}
-
-
-	// 3DTI Debugger
-#if defined (SWITCH_ON_3DTI_ERRORHANDLER) || defined (_3DTI_ANDROID_ERRORHANDLER)
-	Common::CErrorHandler::Instance().SetAssertMode(ASSERT_MODE_CONTINUE);
-#endif
-
+    spatializer->brtManager.EndSetup();
+    
+    // Set default parameters
+    //    if (effectdata->audioSource != nullptr)
+    //    {
+    //
+    //        static_assert(std::tuple_size<decltype(SpatializerCore::perSourceInitialValues)>::value == FloatParameter::NumSourceParameters, "NumSourceParameters should match the size of SpatializerCore::perSourceInitialValues array.");
+    //
+    //        // Initialize with defaults
+    //        for (int i = FloatParameter::FirstSourceParameter; i < FloatParameter::NumSourceParameters; i++)
+    //        {
+    //            float value = 0;
+    //            bool valueReceived = spatializer->GetFloat(i, &value);
+    //            assert(valueReceived);
+    //            SetFloatParameter(spatializer, state, i, value);
+    //        }
+    //    }
+    
+    state->effectdata = effectdata;
+    state->spatializerdata->distanceattenuationcallback = DistanceAttenuationCallback;
 
 	return UNITY_AUDIODSP_OK;
 }
 
 /////////////////////////////////////////////////////////////////////
 
-UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ReleaseCallback(UnityAudioEffectState* state)
+UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ReleaseCallback (UnityAudioEffectState* state)
 {
-	WriteLog(state, "Releasing audio plugin...", "");
-	EffectData* data = state->GetEffectData<EffectData>();
-	delete data;
+	WriteLog (state, "Releasing audio plugin...", "");
+    
+	if (EffectData* data = state->GetEffectData<EffectData>())
+    {
+        std::lock_guard<std::mutex> lock (SpatializerCore::mutex());
+        
+        SpatializerCore* spatializer;
+        try
+        {
+            spatializer = SpatializerCore::instance (state->samplerate, state->dspbuffersize);
+        }
+        catch (const SpatializerCore::IncorrectAudioStateException& e)
+        {
+            WriteLog (std::string ("Error: Spatialiser ReleaseCallback called with incorrect audio state. ") + e.what());
+        }
+        
+        spatializer->brtManager.BeginSetup();
+        
+        if (! spatializer->listenerHRTFModel->DisconnectSoundSource (data->sourceID))
+            WriteLog ("BRT: Error disconnecting sound source from HRTF model");
+
+        if (! spatializer->listenerBRIRModel->DisconnectSoundSource (data->sourceID))
+            WriteLog ("BRT: Error disconnecting sound source from BRIR model");
+        
+        if (! spatializer->brtManager.RemoveSoundSource (data->sourceID))
+            WriteLog ("BRT: Error removing sound source: " + data->sourceID);
+
+        spatializer->brtManager.EndSetup();
+        
+        delete data;
+    }
 	return UNITY_AUDIODSP_OK;
 }
 
@@ -368,12 +349,12 @@ UNITY_AUDIODSP_RESULT SetFloatParameter(SpatializerCore* spatializer, UnityAudio
 	case FloatParameter::EnableHRTFInterpolation:	// Change interpolation method (OPTIONAL)
 		if (value != 0.0f)
 		{
-			data->audioSource->EnableInterpolation();
+//			data->audioSource->EnableInterpolation();
 			WriteLog(state, "SET PARAMETER: Run-time HRTF Interpolation switched ", "ON");
 		}
 		else
 		{
-			data->audioSource->DisableInterpolation();
+//			data->audioSource->DisableInterpolation();
 			WriteLog(state, "SET PARAMETER: Run-time HRTF Interpolation switched ", "OFF");
 		}
 		break;
@@ -381,12 +362,12 @@ UNITY_AUDIODSP_RESULT SetFloatParameter(SpatializerCore* spatializer, UnityAudio
 	case FloatParameter::EnableFarDistanceLPF:
 		if (value > 0.0f)
 		{
-			data->audioSource->EnableFarDistanceEffect();
+//			data->audioSource->EnableFarDistanceEffect();
 			WriteLog(state, "SET PARAMETER: Far distance LPF is ", "Enabled");
 		}
 		else
 		{
-			data->audioSource->DisableFarDistanceEffect();
+//			data->audioSource->DisableFarDistanceEffect();
 			WriteLog(state, "SET PARAMETER: Far distance LPF is ", "Disabled");
 		}
 		break;
@@ -394,12 +375,12 @@ UNITY_AUDIODSP_RESULT SetFloatParameter(SpatializerCore* spatializer, UnityAudio
 	case FloatParameter::EnableDistanceAttenuationAnechoic:
 		if (value > 0.0f)
 		{
-			data->audioSource->EnableDistanceAttenuationAnechoic();
+//			data->audioSource->EnableDistanceAttenuationAnechoic();
 			WriteLog(state, "SET PARAMETER: Distance attenuation is ", "Enabled");
 		}
 		else
 		{
-			data->audioSource->DisableDistanceAttenuationAnechoic();
+//			data->audioSource->DisableDistanceAttenuationAnechoic();
 			WriteLog(state, "SET PARAMETER: Distance attenuation is ", "Disabled");
 		}
 		break;
@@ -407,53 +388,54 @@ UNITY_AUDIODSP_RESULT SetFloatParameter(SpatializerCore* spatializer, UnityAudio
 	case FloatParameter::EnableNearFieldEffect:
 		if (value > 0.0f)
 		{
-			data->audioSource->EnableNearFieldEffect();
+//			data->audioSource->EnableNearFieldEffect();
 			WriteLog(state, "SET PARAMETER: Near Field ILD is ", "Enabled");
 		}
 		else
 		{
-			data->audioSource->DisableNearFieldEffect();
+//			data->audioSource->DisableNearFieldEffect();
 			WriteLog(state, "SET PARAMETER: Near Field ILD is ", "Disabled");
 		}
 		break;
 
 	case FloatParameter::SpatializationMode:
-		if (value == (float)Binaural::TSpatializationMode::HighQuality)
-		{
-			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighQuality);
-		}
-		else if (value == (float)Binaural::TSpatializationMode::HighPerformance)
-		{
-			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighPerformance);
-		}
-		else if (value == (float)Binaural::TSpatializationMode::NoSpatialization)
-		{
-			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::NoSpatialization);
-			WriteLog(state, "SET PARAMETER: No spatialization mode is enabled", "");
-		}
-		else
-		{
-			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
-		}
+//		if (value == (float)Binaural::TSpatializationMode::HighQuality)
+//		{
+//			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighQuality);
+//		}
+//		else if (value == (float)Binaural::TSpatializationMode::HighPerformance)
+//		{
+//			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighPerformance);
+//		}
+//		else if (value == (float)Binaural::TSpatializationMode::NoSpatialization)
+//		{
+//			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::NoSpatialization);
+//			WriteLog(state, "SET PARAMETER: No spatialization mode is enabled", "");
+//		}
+//		else
+//		{
+//			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
+//		}
 		break;
 	case FloatParameter::EnableReverbSend:
+        WriteLog ("BRT: Enable Reverb send: " + std::to_string (value));
 		if (value != 0.0f)
 		{
-			data->audioSource->EnableReverbProcess();
+//			data->audioSource->EnableReverbProcess();
 		}
 		else
 		{
-			data->audioSource->DisableReverbProcess();
+//			data->audioSource->DisableReverbProcess();
 		}
 		break;
 	case FloatParameter::EnableDistanceAttenuationReverb:
 		if (value != 0.0f)
 		{
-			data->audioSource->EnableDistanceAttenuationReverb();
+//			data->audioSource->EnableDistanceAttenuationReverb();
 		}
 		else
 		{
-			data->audioSource->DisableDistanceAttenuationReverb();
+//			data->audioSource->DisableDistanceAttenuationReverb();
 		}
 		break;
 	default:
@@ -484,41 +466,41 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK GetFloatParameterCallback(UnityAud
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 	}
 
-	std::shared_ptr<Binaural::CSingleSourceDSP> source = data->audioSource;
-	assert(source != nullptr);
-	if (source == nullptr)
-	{
-		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
-	}
-	if (valuestr != NULL)
-	{
-		valuestr[0] = '\0';
-	}
+//	std::shared_ptr<Binaural::CSingleSourceDSP> source = data->audioSource;
+//	assert(source != nullptr);
+//	if (source == nullptr)
+//	{
+//		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
+//	}
+//	if (valuestr != NULL)
+//	{
+//		valuestr[0] = '\0';
+//	}
 
 	if (value != NULL)
 	{
 		switch (index)
 		{
 		case FloatParameter::EnableHRTFInterpolation:
-			*value = (float) source->IsInterpolationEnabled();
+//			*value = (float) source->IsInterpolationEnabled();
 			break;
 		case FloatParameter::EnableFarDistanceLPF:
-			*value = (float)source->IsFarDistanceEffectEnabled();
+//			*value = (float)source->IsFarDistanceEffectEnabled();
 			break;
 		case FloatParameter::EnableDistanceAttenuationAnechoic:
-			*value = (float)source->IsDistanceAttenuationEnabledAnechoic();
+//			*value = (float)source->IsDistanceAttenuationEnabledAnechoic();
 			break;
 		case FloatParameter::EnableNearFieldEffect:
-			*value = (float)source->IsNearFieldEffectEnabled();
+//			*value = (float)source->IsNearFieldEffectEnabled();
 			break;
 		case FloatParameter::SpatializationMode:
-			*value = (float)source->GetSpatializationMode();
+//			*value = (float)source->GetSpatializationMode();
 			break;
 		case FloatParameter::EnableReverbSend:
-			*value = (float)source->IsReverbProcessEnabled();
+//			*value = (float)source->IsReverbProcessEnabled();
 			break;
 		case FloatParameter::EnableDistanceAttenuationReverb:
-			*value = (float)source->IsDistanceAttenuationEnabledReverb();
+//			*value = (float)source->IsDistanceAttenuationEnabledReverb();
 			break;
 		default:
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
@@ -568,52 +550,52 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ProcessCallback(UnityAudioEffectSt
 	EffectData* data = state->GetEffectData<EffectData>();
 	assert(spatializer != nullptr);
 
-	if ((data->audioSource->GetSpatializationMode() == Binaural::HighQuality && !spatializer->isBinaryResourceLoaded[HighQualityHRTF])
-		||
-		(data->audioSource->GetSpatializationMode() == Binaural::HighPerformance && !spatializer->isBinaryResourceLoaded[HighPerformanceILD])
-		||
-		(data->audioSource->IsNearFieldEffectEnabled() && !spatializer->isBinaryResourceLoaded[HighQualityILD])
-		)
-	{
-		WriteLog(state, "PROCESS: ERROR: The required binaries are not loaded.", "");
-		// Return silence on error.
-		std::fill(outbuffer, outbuffer + length * (size_t)outchannels, 0.0f);
-		return UNITY_AUDIODSP_OK;
-	}
+//	if ((data->audioSource->GetSpatializationMode() == Binaural::HighQuality && !spatializer->isBinaryResourceLoaded[HighQualityHRTF])
+//		||
+//		(data->audioSource->GetSpatializationMode() == Binaural::HighPerformance && !spatializer->isBinaryResourceLoaded[HighPerformanceILD])
+//		||
+//		(data->audioSource->IsNearFieldEffectEnabled() && !spatializer->isBinaryResourceLoaded[HighQualityILD])
+//		)
+//	{
+//		WriteLog(state, "PROCESS: ERROR: The required binaries are not loaded.", "");
+//		// Return silence on error.
+//		std::fill(outbuffer, outbuffer + length * (size_t)outchannels, 0.0f);
+//		return UNITY_AUDIODSP_OK;
+//	}
 
-	  // Set source and listener transforms
-	data->audioSource->SetSourceTransform(ComputeSourceTransformFromMatrix(state->spatializerdata->sourcematrix, spatializer->scaleFactor));
-	spatializer->listener->SetListenerTransform(ComputeListenerTransformFromMatrix(state->spatializerdata->listenermatrix, spatializer->scaleFactor));
+	  // Set source and listener transform
+    data->soundSource->SetSourceTransform (ComputeSourceTransformFromMatrix (state->spatializerdata->sourcematrix, spatializer->scaleFactor));
+    spatializer->listener->SetListenerTransform (ComputeListenerTransformFromMatrix(state->spatializerdata->listenermatrix, spatializer->scaleFactor));
 
 	// Transform input buffer
-	CMonoBuffer<float> inMonoBuffer(length);
 	size_t j = 0;
 	for (size_t i = 0; i < length; i++)
 	{
-		inMonoBuffer[i] = (inbuffer[j] + inbuffer[j + 1]) / 2.0f;	// We take average of left and right channels
+		data->inMonoBuffer[i] = (inbuffer[j] + inbuffer[j + 1]) / 2.0f;	// We take average of left and right channels
 		j += 2;
 	}
 
-	// Process!!
-	CMonoBuffer<float> outLeftBuffer(length);
-	CMonoBuffer<float> outRightBuffer(length);
-	data->audioSource->SetBuffer(inMonoBuffer);
-	data->audioSource->ProcessAnechoic(outLeftBuffer, outRightBuffer);
+	// data->audioSource->SetBuffer(inMonoBuffer);
+	// data->audioSource->ProcessAnechoic(outLeftBuffer, outRightBuffer);
+    auto& inMonoBuffer = data->inMonoBuffer;
+    auto& outLeftBuffer = data->outLeftBuffer;
+    auto& outRightBuffer = data->outRightBuffer;
+    
+    data->soundSource->SetBuffer (inMonoBuffer);
+    spatializer->brtManager.ProcessAll();
+    spatializer->listener->GetBuffers (outLeftBuffer, outRightBuffer);
 
 	// Limiter
-	CStereoBuffer<float> outStereoBuffer;
-	outStereoBuffer.Interlace(outLeftBuffer, outRightBuffer);
+    auto& outStereoBuffer = data->outStereoBuffer;
+    
+    outStereoBuffer.Interlace (outLeftBuffer, outRightBuffer);
 	if (spatializer->isLimiterEnabled)
 	{
-		spatializer->limiter.Process(outStereoBuffer);
+//		spatializer->limiter.Process(outStereoBuffer);
 	}
 
 	// Transform output buffer
-	size_t i = 0;
-	for (auto it = outStereoBuffer.begin(); it != outStereoBuffer.end(); it++)
-	{
-		outbuffer[i++] = *it;
-	}
+    std::copy (outStereoBuffer.begin(), outStereoBuffer.end(), outbuffer);
 
 	return UNITY_AUDIODSP_OK;
 }

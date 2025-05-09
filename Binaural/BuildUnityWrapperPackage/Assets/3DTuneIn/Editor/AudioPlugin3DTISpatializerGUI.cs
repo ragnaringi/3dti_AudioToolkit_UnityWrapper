@@ -381,10 +381,10 @@ namespace API_3DTI
             void createDropdowns(BinaryResourceRole role, string label, string tooltip)
             {
                 (TSampleRateEnum, string)[] AllSampleRates = {
-                (TSampleRateEnum.K44, "44.1 kHz"),
-                (TSampleRateEnum.K48, "48 kHz"),
-                (TSampleRateEnum.K96, "96 kHz")
-            };
+                    (TSampleRateEnum.K44, "44.1 kHz"),
+                    (TSampleRateEnum.K48, "48 kHz"),
+                    (TSampleRateEnum.K96, "96 kHz")
+                };
                 foreach ((TSampleRateEnum sampleRate, string sampleRateLabel) in AllSampleRates)
                 {
                     // Paths should be relative to a Resources folder.
@@ -393,10 +393,6 @@ namespace API_3DTI
                     if (oldPath != newPath)
                     {
                         toolkit.SetBinaryResourcePath(role, sampleRate, newPath);
-                        if (newPath.EndsWith(".sofa.bytes"))
-                        {
-                            Debug.Log("Notice: SOFA HRTF files are only supported on Windows x64 and Mac OS.");
-                        }
                     }
                 }
             }
@@ -430,7 +426,7 @@ namespace API_3DTI
 
                 // ILD:
                 Common3DTIGUI.SingleSpace();
-                createDropdowns(BinaryResourceRole.HighQualityILD, "ILD", "Select the ILD near field filter of the listener from a .3dti-ild file");
+                createDropdowns(BinaryResourceRole.HighQualityILD, "ILD", "Select the ILD near field filter of the listener from a .sofa file");
 
 
             }
