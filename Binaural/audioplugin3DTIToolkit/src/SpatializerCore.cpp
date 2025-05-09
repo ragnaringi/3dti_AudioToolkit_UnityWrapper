@@ -173,6 +173,8 @@ namespace SpatializerCore3DTI
 
 	bool SpatializerCore::SetFloat(int parameter, float value)
 	{
+        WriteLog ("BRT: Setting parameter " + std::to_string (parameter) + " : " + std::to_string (value));
+        
 		switch (parameter)
 		{
 		case EnableHRTFInterpolation:
@@ -189,15 +191,13 @@ namespace SpatializerCore3DTI
 		{
 			const float min = 0.0f;
 			const float max = 1e20f;
-			//const float def = 0.0875f;
-//			listener->SetHeadRadius(clamp(value, min, max));
+            listener->GetHRTF()->SetHeadRadius (clamp(value, min, max));
 			return true;
 		}
 		case ScaleFactor:
 		{
 			const float min = 1e-20f;
 			const float max = 1e20f;
-			//const float def = 1.0f;
 			scaleFactor = clamp(value, min, max);
 			return true;
 		}
@@ -205,11 +205,11 @@ namespace SpatializerCore3DTI
 		{
 			if (value == 0.0f)
 			{
-//				listener->DisableCustomizedITD();
+                listener->GetHRTF()->DisableWoodworthITD();
 			}
 			else
 			{
-//				listener->EnableCustomizedITD();
+                listener->GetHRTF()->EnableWoodworthITD();
 			}
 			return true;
 		}
@@ -217,50 +217,44 @@ namespace SpatializerCore3DTI
 		{
 			const float min = -30.0f;
 			const float max = 0.0f;
-//			Common::CMagnitudes magnitudes = core.GetMagnitudes();
-//			magnitudes.SetAnechoicDistanceAttenuation(clamp(value, min, max));
-//			core.SetMagnitudes(magnitudes);
-			return true;
+            listener->SetDistanceAttenuationFactor (clamp(value, min, max));
+            return;
 		}
 		case ILDAttenuation:
 		{
 			const float min = 0.0f;
 			const float max = 30.0f;
-//			listener->SetILDAttenutaion(clamp(value, min, max));
-			return true;
+			// listener->SetILDAttenutaion(clamp(value, min, max));
 		}
 		case SoundSpeed:
 		{
 			const float min = 10.0f;
 			const float max = 1000.0f;
-//			Common::CMagnitudes magnitudes = core.GetMagnitudes();
-//			magnitudes.SetSoundSpeed(clamp(value, min, max));
-//			core.SetMagnitudes(magnitudes);
+            globalParameters.SetSoundSpeed (clamp(value, min, max));
 			return true;
 		}
 		case HearingAidDirectionalityAttenuationLeft:
 		{
 			const float min = 0.0f;
 			const float max = 30.0f;
-//			listener->SetDirectionality_dB(Common::T_ear::LEFT, clamp(value, min, max));
-			return true;
+			// listener->SetDirectionality_dB(Common::T_ear::LEFT, clamp(value, min, max));
 		}
 		case HearingAidDirectionalityAttenuationRight:
 		{
 			const float min = 0.0f;
 			const float max = 30.0f;
-//			listener->SetDirectionality_dB(Common::T_ear::RIGHT, clamp(value, min, max));
+			// listener->SetDirectionality_dB(Common::T_ear::RIGHT, clamp(value, min, max));
 			return true;
 		}
 		case EnableHearingAidDirectionalityLeft:
 		{
 			if (value == 0.0f)
 			{
-//				listener->DisableDirectionality(Common::T_ear::LEFT);
+				// listener->DisableDirectionality(Common::T_ear::LEFT);
 			}
 			else
 			{
-//				listener->EnableDirectionality(Common::T_ear::LEFT);
+				// listener->EnableDirectionality(Common::T_ear::LEFT);
 			}
 			return true;
 		}
@@ -268,13 +262,12 @@ namespace SpatializerCore3DTI
 		{
 			if (value == 0.0f)
 			{
-//				listener->DisableDirectionality(Common::T_ear::RIGHT);
+				// listener->DisableDirectionality(Common::T_ear::RIGHT);
 			}
 			else
 			{
-//				listener->EnableDirectionality(Common::T_ear::RIGHT);
+				// listener->EnableDirectionality(Common::T_ear::RIGHT);
 			}
-			return true;
 		}
 		case EnableLimiter:
 		{
@@ -285,39 +278,36 @@ namespace SpatializerCore3DTI
 		{
 			const float min = 1.0f;
 			const float max = 90.0f;
-//			core.SetHRTFResamplingStep((int)clamp(value, min, max));
+			// core.SetHRTFResamplingStep((int)clamp(value, min, max));
 			return true;
 		}
 		case EnableReverbProcessing:
 			enableReverbProcessing = value != 0.0f;
 			return true;
 		case ReverbOrder:
-//			static_assert((float)ADIMENSIONAL == 0.0f && (float)BIDIMENSIONAL == 1.0f && (float)THREEDIMENSIONAL == 2.0f, "These values are assumed by this code and the correspond c# enumerations.");
-//			if (value == (float)ADIMENSIONAL)
-//			{
-//				environment->SetReverberationOrder(ADIMENSIONAL);
-//			}
-//			else if (value == (float)BIDIMENSIONAL)
-//			{
-//				environment->SetReverberationOrder(BIDIMENSIONAL);
-//			}
-//			else if (value == (float)THREEDIMENSIONAL)
-//			{
-//				environment->SetReverberationOrder(THREEDIMENSIONAL);
-//			}
-//			else
-//			{
-//				WriteLog("ERROR: Set3DTISpatializerFloat with parameter ReverbOrder only supports values 0.0, 1.0 and 2.0. Value received: " + to_string(value));
-//				return false;
-//			}
-			return true;
+            //			static_assert((float)ADIMENSIONAL == 0.0f && (float)BIDIMENSIONAL == 1.0f && (float)THREEDIMENSIONAL == 2.0f, "These values are assumed by this code and the correspond c# enumerations.");
+            //			if (value == (float)ADIMENSIONAL)
+            //			{
+            //				environment->SetReverberationOrder(ADIMENSIONAL);
+            //			}
+            //			else if (value == (float)BIDIMENSIONAL)
+            //			{
+            //				environment->SetReverberationOrder(BIDIMENSIONAL);
+            //			}
+            //			else if (value == (float)THREEDIMENSIONAL)
+            //			{
+            //				environment->SetReverberationOrder(THREEDIMENSIONAL);
+            //			}
+            //			else
+            //			{
+            //				WriteLog("ERROR: Set3DTISpatializerFloat with parameter ReverbOrder only supports values 0.0, 1.0 and 2.0. Value received: " + to_string(value));
+            //				return false;
+            //			}
 		case ReverbDistanceAttenuation:
 		{
 			const float min = -90.0f;
 			const float max = 0.0f;
-//			Common::CMagnitudes magnitudes = core.GetMagnitudes();
-//			magnitudes.SetReverbDistanceAttenuation(clamp(value, min, max));
-//			core.SetMagnitudes(magnitudes);
+            listenerBRIRModel->SetDistanceAttenuationFactor (clamp(value, min, max));
 			return true;
 		}
 		default:
@@ -346,50 +336,51 @@ namespace SpatializerCore3DTI
 			*value = perSourceInitialValues[parameter];
 			return true;
 		case HeadRadius:
-//			*value = listener->GetHeadRadius();
+                *value = listener->GetHRTF()->GetHeadRadius();
 			return true;
 		case ScaleFactor:
 			*value = scaleFactor;
 			return true;
 		case EnableCustomITD:
-//			*value = listener->IsCustomizedITDEnabled() ? 1.0f : 0.0f;
+                *value = listener->GetHRTF()->IsWoodworthITDEnabled() ? 1.0f : 0.0f;
 			return true;
 		case AnechoicDistanceAttenuation:
-//			*value = core.GetMagnitudes().GetAnechoicDistanceAttenuation();
+                *value = listener->GetDistanceAttenuationFactor();
 			return true;
 		case ILDAttenuation:
-//			*value = listener->GetILDAttenutaion();
-			return true;
+			// *value = listener->GetILDAttenutaion();
+			// return true;
 		case SoundSpeed:
-//			*value = core.GetMagnitudes().GetSoundSpeed();
+            *value = globalParameters.GetSoundSpeed();
 			return true;
 		case HearingAidDirectionalityAttenuationLeft:
-//			*value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::LEFT);
-			return true;
+			// *value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::LEFT);
+			// return true;
 		case HearingAidDirectionalityAttenuationRight:
-//			*value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::RIGHT);
-			return true;
+			// *value = listener->GetAnechoicDirectionalityAttenuation_dB(T_ear::RIGHT);
+			// return true;
 		case EnableHearingAidDirectionalityLeft:
-//			*value = listener->IsDirectionalityEnabled(T_ear::LEFT);
-			return true;
+			// *value = listener->IsDirectionalityEnabled(T_ear::LEFT);
+			// return true;
 		case EnableHearingAidDirectionalityRight:
-//			*value = listener->IsDirectionalityEnabled(T_ear::RIGHT);
-			return true;
+			// *value = listener->IsDirectionalityEnabled(T_ear::RIGHT);
+			// return true;
 		case EnableLimiter:
 			*value = isLimiterEnabled ? 1.0f : 0.0f;
 			return true;
 		case HRTFResamplingStep:
-//			*value = (float)core.GetHRTFResamplingStep();
-			return true;
+            // *value = (float)HRTFResamplingStep;
+			// return true;
 		case EnableReverbProcessing:
-			*value = (float)enableReverbProcessing;
+			*value = (float) enableReverbProcessing;
 			return true;
 		case ReverbOrder:
-//			*value = (float)environment->GetReverberationOrder();
-			return true;
+			// *value = (float)environment->GetReverberationOrder();
+			// return true;
 		case ReverbDistanceAttenuation:
-//			*value = core.GetMagnitudes().GetReverbDistanceAttenuation();
-			return true;
+            *value = listenerBRIRModel->GetDistanceAttenuationFactor();
+			// *value = core.GetMagnitudes().GetReverbDistanceAttenuation();
+			// return true;
 		default:
 			*value = std::numeric_limits<float>::quiet_NaN();
 			return false;
