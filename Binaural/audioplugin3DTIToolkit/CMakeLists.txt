@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) 
 set(LIB_TYPE MODULE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment version")
+
+option(USE_BRT_LIBRARY "Use BRT library" OFF)
 
 if(WIN32)
     add_definitions(-DPLUGIN_EXPORT=__declspec(dllexport))
@@ -75,8 +78,17 @@ if(WINDOWS)
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include" PREFIX "netcdf" FILES ${NETCDF})
 
     # Link library depenencies
-    file(GLOB LIBS "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/lib/win/*.lib")
-    target_link_libraries(AudioPlugin3DTIToolkit PUBLIC ${STATIC_LIBS})
+    # file(GLOB LIBS "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/lib/win/*.lib")
+    # target_link_libraries(AudioPlugin3DTIToolkit PUBLIC ${STATIC_LIBS})
+endif()
+
+if (USE_BRT_LIBRARY)
+    message("Using BRT library!")
+    file(GLOB_RECURSE BRT_LIBRARY 
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/*.hpp" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/*.h" 
+    )
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/" PREFIX "BRTLibrary" FILES ${BRT_LIBRARY})
 endif()
 
 # Add library
@@ -86,6 +98,7 @@ add_library(AudioPlugin3DTIToolkit ${LIB_TYPE}
     ${3DTI_MODULES}
     ${SOFA}
     ${NETCDF}
+    ${BRT_LIBRARY}
 )
 
 target_include_directories(AudioPlugin3DTIToolkit PUBLIC 
@@ -96,6 +109,9 @@ target_include_directories(AudioPlugin3DTIToolkit PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/eigen"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/dependencies/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries/boost_circular_buffer"
 )
 
 target_compile_definitions(AudioPlugin3DTIToolkit PRIVATE
@@ -117,6 +133,17 @@ if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         BUNDLE TRUE
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/MACOSX/AudioPlugin3DTIToolkit/Info.plist"
+        MACOSX_BUNDLE_IDENTIFIER "es.uma.diana.AudioPlugin3DTIWrapper"
         SUFFIX ".bundle"
+    )
+    add_custom_command(TARGET AudioPlugin3DTIToolkit POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "$<TARGET_BUNDLE_DIR:AudioPlugin3DTIToolkit>"
+            "${CMAKE_SOURCE_DIR}/../BuildUnityWrapperPackage/Assets/Plugins/macOS/AudioPlugin3DTIToolkit.bundle"
+    )
+
+    target_link_libraries(AudioPlugin3DTIToolkit PRIVATE
+        z
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries/libmysofa/lib/osx/universal/libmysofa.a"
     )
 endif()
