@@ -191,7 +191,8 @@ namespace SpatializerCore3DTI
 		{
 			const float min = 0.0f;
 			const float max = 1e20f;
-            listener->GetHRTF()->SetHeadRadius (clamp(value, min, max));
+            if (auto hrtf = listener->GetHRTF())
+                hrtf->SetHeadRadius (clamp(value, min, max));
 			return true;
 		}
 		case ScaleFactor:
@@ -203,14 +204,17 @@ namespace SpatializerCore3DTI
 		}
 		case EnableCustomITD:
 		{
-			if (value == 0.0f)
-			{
-                listener->GetHRTF()->DisableWoodworthITD();
-			}
-			else
-			{
-                listener->GetHRTF()->EnableWoodworthITD();
-			}
+            if (auto hrtf = listener->GetHRTF())
+            {
+                if (value == 0.0f)
+                {
+                    hrtf->DisableWoodworthITD();
+                }
+                else
+                {
+                    hrtf->EnableWoodworthITD();
+                }
+            }
 			return true;
 		}
 		case AnechoicDistanceAttenuation:
@@ -336,16 +340,18 @@ namespace SpatializerCore3DTI
 			*value = perSourceInitialValues[parameter];
 			return true;
 		case HeadRadius:
-                *value = listener->GetHRTF()->GetHeadRadius();
+            if (auto hrtf = listener->GetHRTF())
+                *value = hrtf->GetHeadRadius();
 			return true;
 		case ScaleFactor:
 			*value = scaleFactor;
 			return true;
 		case EnableCustomITD:
+            if (auto hrtf = listener->GetHRTF())
                 *value = listener->GetHRTF()->IsWoodworthITDEnabled() ? 1.0f : 0.0f;
 			return true;
 		case AnechoicDistanceAttenuation:
-                *value = listener->GetDistanceAttenuationFactor();
+            *value = listener->GetDistanceAttenuationFactor();
 			return true;
 		case ILDAttenuation:
 			// *value = listener->GetILDAttenutaion();
@@ -392,7 +398,7 @@ namespace SpatializerCore3DTI
 		SpatializerCore*& s = instancePtr();
 		if (s == nullptr)
 		{
-			s = new SpatializerCore(sampleRate, bufferSize);
+			s = new SpatializerCore (sampleRate, bufferSize);
 		}
         if (s->globalParameters.GetSampleRate() != sampleRate ||s->globalParameters.GetBufferSize() != bufferSize)
 		{
