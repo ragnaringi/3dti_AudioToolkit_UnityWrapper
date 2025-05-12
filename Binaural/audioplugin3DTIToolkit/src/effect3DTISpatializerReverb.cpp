@@ -14,41 +14,17 @@
 * by Tim Murray-Browne at the Dyson School of Engineering, Imperial College London.
 **/
 
-//#include "stdafx.h"
-
 #include "AudioPluginUtil.h"
-
-// Tell the 3DTI Toolkit Core that we will be using the Unity axis convention!
-// WARNING: This define must be done before including Core.h!
 #define AXIS_CONVENTION UNITY
-
-//#include "Core.h"
-
 // Includes for reading HRTF data and logging dor debug
-//#include <fstream>
-//#include <iostream>
-//#include <time.h>
-//#include "Common/AIR.h"
-//#include "effect3DTISpatializerSource.h"
 #include "SpatializerCore.h"
 #include "CommonUtils.h"
 
 using namespace std;
 
-/////////////////////////////////////////////////////////////////////
-
-//using namespace Binaural;
-//using namespace Common;
-//using namespace SpatializerCore3DTI;
-
+//==============================================================================
 namespace SpatializerReverb3DTI
 {
-
-
-	// DEBUG LOG FILE
-	//#define LOG_FILE
-
-
 	enum Parameter
 	{
 		Wetness = 0,
@@ -58,50 +34,44 @@ namespace SpatializerReverb3DTI
 
 	struct EffectData
 	{
-		//std::shared_ptr<SpatializerCore> spatializer;
 		std::array<float, NumParameters> parameters;
+        CMonoBuffer<float> outLeftBuffer;
+        CMonoBuffer<float> outRightBuffer;
 	};
 
 	std::atomic<bool> doesReverbInstanceExist(false);
 
-
-
-/////////////////////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////////////////////
-
-	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback(UnityAudioEffectState* state)
+    //==========================================================================
+	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback (UnityAudioEffectState* state)
 	{
 		if (doesReverbInstanceExist.exchange(true))
 		{
 			// There is already an instance
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
-		assert(doesReverbInstanceExist);
+		assert (doesReverbInstanceExist);
 
-		try
-		{
-			auto effectdata = new EffectData;
-			effectdata->parameters = {
-				0.5f, // wetness
-			};
-			state->effectdata = effectdata;
-		}
-        catch (const SpatializerCore3DTI::SpatializerCore::IncorrectAudioStateException& e)
-		{
-			WriteLog(e.what());
-			if (state->effectdata != nullptr)
-			{
-				delete static_cast<EffectData*> (state->effectdata);
-			}
-			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
-		}
+        auto effectdata = new EffectData;
+        effectdata->outLeftBuffer.resize (state->dspbuffersize);
+        effectdata->outRightBuffer.resize (state->dspbuffersize);
+        effectdata->parameters = {
+            0.5f, // wetness
+        };
+        state->effectdata = effectdata;
 
 		return UNITY_AUDIODSP_OK;
 	}
 
-	/////////////////////////////////////////////////////////////////////
-
+    UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ReleaseCallback (UnityAudioEffectState* state)
+    {
+        if (EffectData* data = state->GetEffectData<EffectData>())
+            delete data;
+        
+        assert(doesReverbInstanceExist);
+        doesReverbInstanceExist = false;
+        
+        return UNITY_AUDIODSP_OK;
+    }
 
 	int InternalRegisterEffectDefinition(UnityAudioEffectDefinition& definition)
 	{
@@ -110,22 +80,6 @@ namespace SpatializerReverb3DTI
 		RegisterParameter(definition, "Wetness", "", 0.0f, 1.0f, 0.5f, 1.0f, 1.0f, Wetness, "Ratio of reverb to dry audio in output mix");
 		return NumParameters;
 	}
-
-
-/////////////////////////////////////////////////////////////////////
-
-	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ReleaseCallback(UnityAudioEffectState* state)
-	{
-		if (EffectData* data = state->GetEffectData<EffectData>())
-            delete data;
-        
-		assert(doesReverbInstanceExist);
-		doesReverbInstanceExist = false;
-        
-		return UNITY_AUDIODSP_OK;
-	}
-
-/////////////////////////////////////////////////////////////////////
 
 	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK SetFloatParameterCallback(UnityAudioEffectState* state, int index, float value)
 	{
@@ -140,8 +94,6 @@ namespace SpatializerReverb3DTI
 		return UNITY_AUDIODSP_OK;
 	}
 
-/////////////////////////////////////////////////////////////////////
-
 	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK GetFloatParameterCallback(UnityAudioEffectState* state, int index, float* value, char *valuestr)
 	{
 		EffectData* data = state->GetEffectData<EffectData>();
@@ -155,19 +107,15 @@ namespace SpatializerReverb3DTI
 		return UNITY_AUDIODSP_OK;
 	}
 
-/////////////////////////////////////////////////////////////////////
-
 	int UNITY_AUDIODSP_CALLBACK GetFloatBufferCallback(UnityAudioEffectState* state, const char* name, float* buffer, int numsamples)
 	{
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 	}
 
-/////////////////////////////////////////////////////////////////////
-
-	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ProcessCallback(UnityAudioEffectState* state, float* inbuffer, float* outbuffer, unsigned int length, int inchannels, int outchannels)
-	{	
-		EffectData* effectData = state->GetEffectData<EffectData>();
-        std::lock_guard<std::mutex> lock(SpatializerCore3DTI::SpatializerCore::mutex());
+	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ProcessCallback (UnityAudioEffectState* state, float* inbuffer, float* outbuffer,
+                                                                   unsigned int length, int inchannels, int outchannels)
+	{
+        std::lock_guard<std::mutex> lock (SpatializerCore3DTI::SpatializerCore::mutex());
 		
         SpatializerCore3DTI::SpatializerCore* spatializer;
 		try
@@ -176,56 +124,31 @@ namespace SpatializerReverb3DTI
 		}
         catch (const SpatializerCore3DTI::SpatializerCore::IncorrectAudioStateException& e)
 		{
-			WriteLog(std::string("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
+			WriteLog (std::string("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
 
 		if (inchannels != 2 || outchannels != 2)
 		{
+            WriteLog ("BRT: ERROR: Incorrect channel count in Reverb plugin");
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
-
-        const int bufferSize = spatializer->globalParameters.GetBufferSize();
-
-		assert(bufferSize == length); // This should always be true as we test the audio state above
-		if (bufferSize != length)
-		{
-			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
-		}
-
-		// 7. Process reverb and generate the reverb output
-        /*
-        if (spatializer->enableReverbProcessing && spatializer->isBinaryResourceLoaded[SpatializerCore3DTI::ReverbBRIR])
-		{
-			// assert(const_cast<CABIR&>(spatializer->environment->GetABIR()).IsInitialized());
-
-			Common::CEarPair<CMonoBuffer<float>> bReverbOutput;
-			bReverbOutput.left.resize(bufferSize);
-			bReverbOutput.right.resize(bufferSize);
-			// assert(bReverbOutput.left.size() == length && bReverbOutput.right.size() == length);
-			// spatializer->environment->ProcessVirtualAmbisonicReverb(bReverbOutput.left, bReverbOutput.right);
-
-			const float wet = clamp(effectData->parameters[Wetness], 0.0f, 1.0f);
-			const float dry = 1 - wet;
-			for (size_t i = 0; i < length; i++)
-			{
-				outbuffer[i * 2 + 0] = dry * inbuffer[i*2+0] + wet * bReverbOutput.left[i];
-				outbuffer[i * 2 + 1] = dry * inbuffer[i*2+1] + wet * bReverbOutput.right[i];
-			}
-		}
-		else
-		{
-         */
-        for (size_t i = 0; i < (size_t) length * 2; i++)
+        
+        EffectData* data = state->GetEffectData<EffectData>();
+        
+        auto& outLeftBuffer = data->outLeftBuffer;
+        auto& outRightBuffer = data->outRightBuffer;
+        
+        spatializer->brtManager.ProcessAll();
+        spatializer->listener->GetBuffers (outLeftBuffer, outRightBuffer);
+    
+        for (size_t i = 0; i < length; ++i)
         {
-            outbuffer[i] = inbuffer[i];
+            outbuffer[i * 2 + 0] = outLeftBuffer[i];
+            outbuffer[i * 2 + 1] = outRightBuffer[i];
         }
-		// }
 
 		return UNITY_AUDIODSP_OK;
-
-
-
 	}
 
 }

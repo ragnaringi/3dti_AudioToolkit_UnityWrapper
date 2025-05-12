@@ -6,6 +6,17 @@
 #include "AudioPluginInterface.h"
 #include "BRTLibrary.h"
 
+namespace BRTHelpers
+{
+struct ScopedManagerSetup
+{
+    ScopedManagerSetup (BRTBase::CBRTManager& m)
+      : manager (m)       { manager.BeginSetup(); }
+    ~ScopedManagerSetup() { manager.EndSetup(); }
+    BRTBase::CBRTManager& manager;
+};
+}
+
 namespace SpatializerCore3DTI
 {
 	extern "C" UNITY_AUDIODSP_EXPORT_API bool Get3DTISpatializerFloat(int parameter, float* value);
@@ -93,11 +104,9 @@ namespace SpatializerCore3DTI
 		~SpatializerCore();
 
 		bool loadBinary(BinaryRole role, std::string path);
-		//bool loadBinaries(std::string hrtfPath,	std::string ildPath, std::string highPerformanceILDPath, std::string brirPath);
 
 		bool SetFloat(int parameter, float value);
 		bool GetFloat(int parameter, float* value);
-
 
 		class IncorrectAudioStateException : public std::runtime_error
 		{

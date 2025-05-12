@@ -75,7 +75,8 @@ namespace SpatializerCore3DTI
         globalParameters.SetSampleRate (sampleRate);
         globalParameters.SetBufferSize (bufferSize);
         
-        brtManager.BeginSetup();
+        const BRTHelpers::ScopedManagerSetup sm (brtManager);
+        
         listener = brtManager.CreateListener<BRTBase::CListener> (LISTENER_ID);
         
         listenerHRTFModel = brtManager.CreateListenerModel<BRTListenerModel::CListenerHRTFModel> (LISTENER_HRTF_MODEL_ID);
@@ -91,8 +92,6 @@ namespace SpatializerCore3DTI
        
         if (! listener->ConnectListenerModel (LISTENER_BRIR_MODEL_ID))
             WriteLog ("BRT: Error connecting listener model");
-                    
-        brtManager.EndSetup();
 	}
 
 
@@ -386,7 +385,7 @@ namespace SpatializerCore3DTI
 		case ReverbDistanceAttenuation:
             *value = listenerBRIRModel->GetDistanceAttenuationFactor();
 			// *value = core.GetMagnitudes().GetReverbDistanceAttenuation();
-			// return true;
+            return true;
 		default:
 			*value = std::numeric_limits<float>::quiet_NaN();
 			return false;
@@ -412,7 +411,7 @@ namespace SpatializerCore3DTI
 		return instancePtr();
 	}
 
-	bool SpatializerCore::resetInstanceIfNecessary(UInt32 sampleRate, UInt32 bufferSize)
+	bool SpatializerCore::resetInstanceIfNecessary (UInt32 sampleRate, UInt32 bufferSize)
 	{
 		SpatializerCore*& s = instancePtr();
         if (s != nullptr && (s->globalParameters.GetSampleRate() != sampleRate || s->globalParameters.GetBufferSize() != bufferSize))
