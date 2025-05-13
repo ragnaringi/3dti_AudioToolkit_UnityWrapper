@@ -13,13 +13,12 @@
 * by Tim Murray-Browne at the Dyson School of Engineering, Imperial College London.
 **/
 
-#include "effect3DTISpatializerSource.h"
-// Includes for debug logging
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <sstream>
 #include <cstdint>
+#include "effect3DTISpatializerSource.h"
 
 enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOAD_END = 2, RESULT_LOAD_OK = 3, RESULT_LOAD_ERROR = -1 };
 
@@ -36,10 +35,6 @@ enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOA
 #include <sstream>
 #endif
 
-//#include "HRTF/HRTFFactory.h"
-#include "SpatializerCore.h"
-#include "CommonUtils.h"
-#include "BRTLibrary.h"
 
 /////////////////////////////////////////////////////////////////////
 

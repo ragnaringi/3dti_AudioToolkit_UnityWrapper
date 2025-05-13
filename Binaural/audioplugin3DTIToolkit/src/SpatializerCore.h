@@ -1,9 +1,9 @@
 #pragma once
 
-#include <array>
-#include <cfloat>
-#include <mutex>
+#define NOMINMAX
+#include "AudioPluginUtil.h"
 #include "AudioPluginInterface.h"
+#include "CommonUtils.h"
 #include "BRTLibrary.h"
 
 namespace BRTHelpers

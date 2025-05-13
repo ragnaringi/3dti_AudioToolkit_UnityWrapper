@@ -221,7 +221,7 @@ namespace SpatializerCore3DTI
 			const float min = -30.0f;
 			const float max = 0.0f;
             listener->SetDistanceAttenuationFactor (clamp(value, min, max));
-            return;
+            return true;
 		}
 		case ILDAttenuation:
 		{

@@ -13,7 +13,6 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment v
 option(USE_BRT_LIBRARY "Use BRT library" OFF)
 
 if(WIN32)
-    add_definitions(-DPLUGIN_EXPORT=__declspec(dllexport))
 else()
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -21,16 +20,14 @@ else()
     endif()
 endif()
 
-# Collect sources
-file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp src/*.h)
-file(GLOB_RECURSE 3DTI_TOOLKIT CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit/*.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_Toolkit/*.h"
-)
-
 # Collect your project sources
 file(GLOB_RECURSE PROJECT_SRC CONFIGURE_DEPENDS src/*.cpp src/*.h)
+# Remove files ending in HL.cpp or HA.cpp
+foreach(file ${PROJECT_SRC})
+    if(file MATCHES ".*HL\\.cpp$" OR file MATCHES ".*HA\\.cpp$")
+        list(REMOVE_ITEM PROJECT_SRC "${file}")
+    endif()
+endforeach()
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" PREFIX "src" FILES ${PROJECT_SRC})
 
 # Collect third-party sources
@@ -48,7 +45,7 @@ file(GLOB_RECURSE 3DTI_MODULES
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/ILD/*.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/ILD/*.h"
 )
-if(NOT WINDOWS)
+if(NOT WIN32)
     foreach(file ${3DTI_MODULES})
         if(file MATCHES ".*Factory\\.(cpp|h)$")
             list(REMOVE_ITEM 3DTI_MODULES ${file})
@@ -58,7 +55,7 @@ endif()
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager" PREFIX "3dti_Modules" FILES ${3DTI_MODULES})
 
 # Only add SOFA files for non Apple platforms
-if(WINDOWS)
+if(NEVER)
     file(GLOB_RECURSE SOFA 
         "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src/*.cpp" 
         "${CMAKE_CURRENT_SOURCE_DIR}/../../3dti_AudioToolkit/3dti_ResourceManager/third_party_libraries/sofacoustics/libsofa/src/*.h"
@@ -94,10 +91,10 @@ endif()
 # Add library
 add_library(AudioPlugin3DTIToolkit ${LIB_TYPE}
     ${PROJECT_SRC}
-    ${3DTI_TOOLKIT}
-    ${3DTI_MODULES}
-    ${SOFA}
-    ${NETCDF}
+    #${3DTI_TOOLKIT}
+    #${3DTI_MODULES}
+    #${SOFA}
+    #${NETCDF}
     ${BRT_LIBRARY}
 )
 
@@ -119,7 +116,7 @@ target_compile_definitions(AudioPlugin3DTIToolkit PRIVATE
     _3DTI_ANGLE_CONVENTION_LISTEN
 
     # Platform-specific macros
-    $<$<PLATFORM_ID:Windows>:>
+    $<$<PLATFORM_ID:Windows>:DISABLE_SOFA_SUPPORT>
     $<$<PLATFORM_ID:Darwin>:DISABLE_SOFA_SUPPORT>
     $<$<PLATFORM_ID:Linux>:>
     $<$<PLATFORM_ID:Android>:>
@@ -136,14 +133,36 @@ if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         MACOSX_BUNDLE_IDENTIFIER "es.uma.diana.AudioPlugin3DTIWrapper"
         SUFFIX ".bundle"
     )
+
+    target_link_libraries(AudioPlugin3DTIToolkit PRIVATE
+        z
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries/libmysofa/lib/osx/universal/libmysofa.a"
+    )
+
     add_custom_command(TARGET AudioPlugin3DTIToolkit POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "$<TARGET_BUNDLE_DIR:AudioPlugin3DTIToolkit>"
             "${CMAKE_SOURCE_DIR}/../BuildUnityWrapperPackage/Assets/Plugins/macOS/AudioPlugin3DTIToolkit.bundle"
     )
+elseif(WIN32)
+    target_link_directories(AudioPlugin3DTIToolkit PRIVATE "${CMAKE_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries/libmysofa/lib/vs/x64")
+    target_link_libraries(AudioPlugin3DTIToolkit PRIVATE 
+        mysofa
+        $<$<CONFIG:Debug>:zlibstaticd>
+        $<$<CONFIG:Release>:zlibstatic>
+    )
 
-    target_link_libraries(AudioPlugin3DTIToolkit PRIVATE
-        z
-        "${CMAKE_CURRENT_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries/libmysofa/lib/osx/universal/libmysofa.a"
+    set(UNITY_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/../BuildUnityWrapperPackage/Assets/Plugins")
+
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(UNITY_PLUGIN_DIR "${UNITY_PLUGIN_DIR}/x86_64")
+    else()
+        set(UNITY_PLUGIN_DIR "${UNITY_PLUGIN_DIR}/x86")
+    endif()
+
+    add_custom_command(TARGET AudioPlugin3DTIToolkit POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "$<TARGET_FILE:AudioPlugin3DTIToolkit>"
+            "${UNITY_PLUGIN_DIR}/AudioPlugin3DTIToolkit.dll"
     )
 endif()

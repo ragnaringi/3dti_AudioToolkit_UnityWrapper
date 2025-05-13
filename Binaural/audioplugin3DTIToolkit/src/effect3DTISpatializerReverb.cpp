@@ -14,11 +14,7 @@
 * by Tim Murray-Browne at the Dyson School of Engineering, Imperial College London.
 **/
 
-#include "AudioPluginUtil.h"
-#define AXIS_CONVENTION UNITY
-// Includes for reading HRTF data and logging dor debug
 #include "SpatializerCore.h"
-#include "CommonUtils.h"
 
 using namespace std;
 
