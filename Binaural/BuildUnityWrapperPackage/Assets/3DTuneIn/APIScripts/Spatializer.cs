@@ -181,9 +181,6 @@ namespace API_3DTI
     };
         [SerializeField]
         private string[] highQualityILDPaths = {
-        "Assets/3DTuneIn/Resources/Data/HighQuality/ILD/NearFieldCompensation_ILD_44100.3dti-ild.bytes",
-        "Assets/3DTuneIn/Resources/Data/HighQuality/ILD/NearFieldCompensation_ILD_48000.3dti-ild.bytes",
-        "Assets/3DTuneIn/Resources/Data/HighQuality/ILD/NearFieldCompensation_ILD_96000.3dti-ild.bytes",
         "Assets/3DTuneIn/Resources/Data/HighQuality/ILD/NearFieldCompensation_ILD_44100.sofa.bytes",
         "Assets/3DTuneIn/Resources/Data/HighQuality/ILD/NearFieldCompensation_ILD_48000.sofa.bytes",
         "Assets/3DTuneIn/Resources/Data/HighQuality/ILD/NearFieldCompensation_ILD_96000.sofa.bytes",
@@ -484,23 +481,28 @@ namespace API_3DTI
 
         private bool sendBinaryResourcePathToPlugin(BinaryResourceRole role, string path)
         {
+            Debug.Log("sendBinaryResourcePathToPlugin: " + path);
             AudioSettings.GetDSPBufferSize(out int dspBufferSize, out _);
 
             if (path.Length == 0)
             {
+                // Debug.Log("LOADING BINARY: " + path);
                 Load3DTISpatializerBinary((int)role, path, AudioSettings.outputSampleRate, dspBufferSize);
             }
             else if (!(SaveResourceAsFile(path, out string newPath) && Load3DTISpatializerBinary((int)role, newPath, AudioSettings.outputSampleRate, dspBufferSize)))
             {
+                // Debug.Log("LOADING BINARY: " + path);
                 Debug.LogError($"Failed to load Spatializer binary resource {path} for {role} at sample rate {AudioSettings.outputSampleRate}.");
-                return false;
+                // return false;
             }
+            // Debug.Log("DID NOT LOAD BINARY: " + path);
             return true;
         }
 
 
         private bool sendAllBinaryResourcePathsToPlugin()
         {
+            Debug.Log("!!!!! sendAllBinaryResourcePathsToPlugin() !!!!");
             if (!GetSampleRate(out TSampleRateEnum sr))
             {
                 return false;
@@ -509,7 +511,8 @@ namespace API_3DTI
             bool ok = true;
             foreach (BinaryResourceRole role in Enum.GetValues(typeof(BinaryResourceRole)))
             {
-               ok = ok && sendBinaryResourcePathToPlugin(role, binaryResourcePaths(role)[(int)sr]);
+                Debug.Log("Sending resource for binary role: " + role);
+                ok = ok && sendBinaryResourcePathToPlugin(role, binaryResourcePaths(role)[(int)sr]);
             }
             return ok;
         }
