@@ -1,5 +1,10 @@
 # cmake -DCMAKE_BUILD_TYPE=Release -B build
 # cmake --build build
+# Android Build Command
+# cmake -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/6000.0.44f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
+#       -DANDROID_ABI=arm64-v8a \
+#       -DANDROID_PLATFORM=android-21 \
+#       -B build -DCMAKE_BUILD_TYPE=Release
 
 cmake_minimum_required(VERSION 3.15)
 project(AudioPlugin3DTIToolkit LANGUAGES C CXX)
@@ -164,13 +169,14 @@ elseif(WIN32)
             "$<TARGET_FILE:AudioPlugin3DTIToolkit>"
             "${UNITY_PLUGIN_DIR}/AudioPlugin3DTIToolkit.dll"
     )
-elseif(ANDROID_NDK)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
     # Enable specific features or optimizations for Android
     message(STATUS "Android API Level: ${ANDROID_NATIVE_API_LEVEL}")
     message(STATUS "Android ABI: ${ANDROID_ABI}")
 
+    message(STATUS "Libmysofa ${CMAKE_CURRENT_SOURCE_DIR}/lib/libmysofa/android/ARM64/${CMAKE_BUILD_TYPE}")
     target_link_directories(AudioPlugin3DTIToolkit PRIVATE 
-        "${CMAKE_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries/libmysofa/lib/android/ARM64/Release"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/libmysofa/android/ARM64/${CMAKE_BUILD_TYPE}"
     )
     target_link_libraries(AudioPlugin3DTIToolkit PRIVATE 
         mysofa
