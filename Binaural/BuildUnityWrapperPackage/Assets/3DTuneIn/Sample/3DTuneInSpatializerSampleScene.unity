@@ -42,7 +42,8 @@ RenderSettings:
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 12
+  serializedVersion: 13
+  m_BakeOnSceneLoad: 0
   m_GISettings:
     serializedVersion: 2
     m_BounceScale: 1
@@ -1255,11 +1256,11 @@ MonoBehaviour:
   - 1
   - -3.01
   highQualityHRTFPaths:
-  - Data/HighQuality/HRTF/3DTI_HRTF_IRC1053_512s_44100Hz.3dti-hrtf.bytes
+  - Data/HighQuality/HRTF/3DTI_HRTF_IRC1008_512s_44100Hz.sofa.bytes
   - Data/HighQuality/HRTF/3DTI_HRTF_IRC1053_512s_48000Hz.3dti-hrtf.bytes
   - Data/HighQuality/HRTF/3DTI_HRTF_IRC1053_512s_96000Hz.3dti-hrtf.bytes
   highQualityILDPaths:
-  - Data/HighQuality/ILD/NearFieldCompensation_ILD_44100.3dti-ild.bytes
+  - Data/HighQuality/ILD/NearFieldCompensation_ILD_44100.sofa.bytes
   - Data/HighQuality/ILD/NearFieldCompensation_ILD_48000.3dti-ild.bytes
   - Data/HighQuality/ILD/NearFieldCompensation_ILD_96000.3dti-ild.bytes
   highPerformanceILDPaths:
@@ -1267,7 +1268,7 @@ MonoBehaviour:
   - Data/HighPerformance/ILD/HRTF_ILD_48000.3dti-ild.bytes
   - Data/HighPerformance/ILD/HRTF_ILD_96000.3dti-ild.bytes
   reverbBRIRPaths:
-  - Data/Reverb/BRIR/3DTI_BRIR_small_44100Hz.3dti-brir.bytes
+  - Data/Reverb/BRIR/BRIR_Trapezoid_44100Hz.sofa.bytes
   - Data/Reverb/BRIR/3DTI_BRIR_small_48000Hz.3dti-brir.bytes
   - Data/Reverb/BRIR/3DTI_BRIR_small_96000Hz.3dti-brir.bytes
 --- !u!114 &963194230
@@ -2386,7 +2387,7 @@ LightingSettings:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Settings.lighting
-  serializedVersion: 8
+  serializedVersion: 9
   m_EnableBakedLightmaps: 1
   m_EnableRealtimeLightmaps: 1
   m_RealtimeEnvironmentLighting: 1
