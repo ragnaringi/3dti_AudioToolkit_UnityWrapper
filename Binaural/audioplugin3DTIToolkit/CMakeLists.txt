@@ -12,8 +12,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment v
 
 option(USE_BRT_LIBRARY "Use BRT library" OFF)
 
-if(WIN32)
-else()
+if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         set(LIB_TYPE STATIC)
@@ -164,5 +163,27 @@ elseif(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy
             "$<TARGET_FILE:AudioPlugin3DTIToolkit>"
             "${UNITY_PLUGIN_DIR}/AudioPlugin3DTIToolkit.dll"
+    )
+elseif(ANDROID_NDK)
+    # Enable specific features or optimizations for Android
+    message(STATUS "Android API Level: ${ANDROID_NATIVE_API_LEVEL}")
+    message(STATUS "Android ABI: ${ANDROID_ABI}")
+
+    target_link_directories(AudioPlugin3DTIToolkit PRIVATE 
+        "${CMAKE_SOURCE_DIR}/../../BRTLibrary/include/third_party_libraries/libmysofa/lib/android/ARM64/Release"
+    )
+    target_link_libraries(AudioPlugin3DTIToolkit PRIVATE 
+        mysofa
+        z
+    )
+
+    # Define the output path (absolute or relative)
+    set(UNITY_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/../BuildUnityWrapperPackage/Assets/Plugins/Android_64")
+
+    # Copy the .so after building
+    add_custom_command(TARGET AudioPlugin3DTIToolkit POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${UNITY_PLUGIN_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AudioPlugin3DTIToolkit> ${UNITY_PLUGIN_DIR}
+        COMMENT "Copying AudioPlugin3DTIToolkit.so to ${UNITY_PLUGIN_DIR}"
     )
 endif()
