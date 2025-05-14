@@ -1,6 +1,7 @@
 #pragma once
 
 #define NOMINMAX
+#include <cfloat>
 #include "AudioPluginUtil.h"
 #include "AudioPluginInterface.h"
 #include "CommonUtils.h"
