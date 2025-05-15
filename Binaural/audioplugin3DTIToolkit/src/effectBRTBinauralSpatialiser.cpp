@@ -1,21 +1,8 @@
 /**
-*** 3D-Tune-In Toolkit Unity Wrapper: Binaural Spatializer ***
-*
-* Created on: February 2017
-*
-* Author: 3DI-DIANA Research Group / University of Malaga / Spain
-* Contact: areyes@uma.es
-*
-* Project: 3DTI (3D-games for TUNing and lEarnINg about hearing aids)
-* Module: 3DTI Toolkit Unity Wrapper
-*
-* Updated: June 2020 onwards
-* by Tim Murray-Browne at the Dyson School of Engineering, Imperial College London.
+ * BRT-Unity: Binaural Spatializer
 **/
 
-#include "SpatializerCore.h"
-
-enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOAD_END = 2, RESULT_LOAD_OK = 3, RESULT_LOAD_ERROR = -1 };
+#include "SpatialiserCore.h"
 
 // DEBUG LOG 
 #ifdef UNITY_ANDROID
@@ -31,11 +18,9 @@ enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOA
 #endif
 
 
-/////////////////////////////////////////////////////////////////////
-
 namespace BRTBinauralSpatialiser
 {
-	using namespace SpatializerCore3DTI;
+	using namespace BRTSpatialiserCore;
 
 	struct EffectData
 	{
@@ -45,33 +30,30 @@ namespace BRTBinauralSpatialiser
 	};
 
 	template <class T>
-    void WriteLog(std::string logText, const T& value, std::string sourceID = "")
+    void WriteLog (std::string logText, const T& value, std::string sourceID = "")
 	{
-		std::cerr << logText << " " << value;
+      #ifdef DEBUG_LOG_CATx
+        std::ostringstream os;
+        os << logtext << value;
+        string fulltext = os.str();
+        __android_log_print(ANDROID_LOG_DEBUG, "BRT", fulltext.c_str());
+	  #else
+        std::cerr << logText << " " << value;
         std::cerr << " (source " << sourceID << ")";
-		std::cerr << std::endl;
-
-		//#ifdef DEBUG_LOG_CAT
-		//        std::ostringstream os;
-		//        os << logtext << value;
-		//        string fulltext = os.str();
-		//        __android_log_print(ANDROID_LOG_DEBUG, "3DTISPATIALIZER", fulltext.c_str());
-		//#endif
+        std::cerr << std::endl;
+      #endif
 	}
 
 template <class T>
 void WriteLog (UnityAudioEffectState* state, std::string logtext, const T& value)
 {
-	WriteLog(logtext, value, state->GetEffectData<EffectData>()->sourceID);
+	WriteLog (logtext, value, state->GetEffectData<EffectData>()->sourceID);
 }
 
 void WriteLog (std::string logtext)
 {
-	WriteLog(logtext, "");
-	//std::cerr << logtext << std::endl;
+	WriteLog (logtext, "");
 }
-
-	/////////////////////////////////////////////////////////////////////
 
 int InternalRegisterEffectDefinition(UnityAudioEffectDefinition& definition)
 {
@@ -89,8 +71,6 @@ int InternalRegisterEffectDefinition(UnityAudioEffectDefinition& definition)
 	definition.flags |= UnityAudioEffectDefinitionFlags_IsSpatializer;
 	return numparams;
 }
-
-/////////////////////////////////////////////////////////////////////
 
 Common::CTransform ComputeListenerTransformFromMatrix(float* listenerMatrix, float scale)
 {
@@ -159,8 +139,6 @@ Common::CTransform ComputeListenerTransformFromMatrix(float* listenerMatrix, flo
 	return listenerTransform;
 }
 
-/////////////////////////////////////////////////////////////////////
-
 Common::CTransform ComputeSourceTransformFromMatrix(float* sourceMatrix, float scale)
 {
 	// Orientation does not matters for audio sources
@@ -169,10 +147,7 @@ Common::CTransform ComputeSourceTransformFromMatrix(float* sourceMatrix, float s
 	return sourceTransform;
 }
 
-/////////////////////////////////////////////////////////////////////
-// AUDIO PLUGIN SDK FUNCTIONS
-/////////////////////////////////////////////////////////////////////
-
+//==============================================================================
 static UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK DistanceAttenuationCallback(UnityAudioEffectState* state, float distanceIn, float attenuationIn, float* attenuationOut)
 {
 	*attenuationOut = attenuationIn;
@@ -180,7 +155,7 @@ static UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK DistanceAttenuationCallback
 }
 
 // Mutex must be locked when calling this
-UNITY_AUDIODSP_RESULT SetFloatParameter (SpatializerCore* spatializer, UnityAudioEffectState* state, int index, float value)
+UNITY_AUDIODSP_RESULT SetFloatParameter (SpatialiserCore* spatializer, UnityAudioEffectState* state, int index, float value)
 {
     EffectData* data = state->GetEffectData<EffectData>();
     assert (data != nullptr && spatializer != nullptr);
@@ -287,13 +262,13 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback (UnityAudioEffectSt
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 	}
 
-	std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
-	SpatializerCore* spatializer;
+	std::lock_guard<std::mutex> lock(SpatialiserCore::mutex());
+	SpatialiserCore* spatializer;
 	try
 	{
-		spatializer = SpatializerCore::instance (state->samplerate, state->dspbuffersize);
+		spatializer = SpatialiserCore::instance (state->samplerate, state->dspbuffersize);
 	}
-	catch (const SpatializerCore::IncorrectAudioStateException& e)
+	catch (const SpatialiserCore::IncorrectAudioStateException& e)
 	{
 		WriteLog(std::string("Error: Spatialiser CreateCallback called with incorrect audio state. ") + e.what());
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
@@ -333,8 +308,8 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback (UnityAudioEffectSt
     // Set default parameters
     if (effectdata->soundSource != nullptr)
     {
-        static_assert (std::tuple_size<decltype(SpatializerCore::perSourceInitialValues)>::value == FloatParameter::NumSourceParameters, "NumSourceParameters should match the size of SpatializerCore::perSourceInitialValues array.");
-//
+        static_assert (std::tuple_size<decltype(SpatialiserCore::perSourceInitialValues)>::value == FloatParameter::NumSourceParameters, "NumSourceParameters should match the size of SpatialiserCore::perSourceInitialValues array.");
+        
         // Initialize with defaults
         for (int i = FloatParameter::FirstSourceParameter; i < FloatParameter::NumSourceParameters; ++i)
         {
@@ -348,22 +323,20 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback (UnityAudioEffectSt
 	return UNITY_AUDIODSP_OK;
 }
 
-/////////////////////////////////////////////////////////////////////
-
 UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ReleaseCallback (UnityAudioEffectState* state)
 {
 	WriteLog (state, "Releasing audio plugin...", "");
     
 	if (EffectData* data = state->GetEffectData<EffectData>())
     {
-        std::lock_guard<std::mutex> lock (SpatializerCore::mutex());
+        std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
         
-        SpatializerCore* spatializer;
+        SpatialiserCore* spatializer;
         try
         {
-            spatializer = SpatializerCore::instance (state->samplerate, state->dspbuffersize);
+            spatializer = SpatialiserCore::instance (state->samplerate, state->dspbuffersize);
         }
-        catch (const SpatializerCore::IncorrectAudioStateException& e)
+        catch (const SpatialiserCore::IncorrectAudioStateException& e)
         {
             WriteLog (std::string ("Error: Spatialiser ReleaseCallback called with incorrect audio state. ") + e.what());
         }
@@ -386,19 +359,15 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ReleaseCallback (UnityAudioEffectS
 	return UNITY_AUDIODSP_OK;
 }
 
-
-/////////////////////////////////////////////////////////////////////
-
-
 UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK SetFloatParameterCallback(UnityAudioEffectState* state, int index, float value)
 {
-	std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
-	SpatializerCore* spatializer;
+	std::lock_guard<std::mutex> lock(SpatialiserCore::mutex());
+	SpatialiserCore* spatializer;
 	try
 	{
-		spatializer = SpatializerCore::instance(state->samplerate, state->dspbuffersize);
+		spatializer = SpatialiserCore::instance(state->samplerate, state->dspbuffersize);
 	}
-	catch (const SpatializerCore::IncorrectAudioStateException& e)
+	catch (const SpatialiserCore::IncorrectAudioStateException& e)
 	{
 		WriteLog(std::string("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
@@ -407,24 +376,23 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK SetFloatParameterCallback(UnityAud
 	return SetFloatParameter(spatializer, state, index, value);
 }
 
-/////////////////////////////////////////////////////////////////////
-
-UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK GetFloatParameterCallback(UnityAudioEffectState* state, int index, float* value, char* valuestr)
+UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK GetFloatParameterCallback (UnityAudioEffectState* state, int index, float* value, char* valuestr)
 {
-	EffectData* data = state->GetEffectData<EffectData>();
-
-	std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
-	SpatializerCore* spatializer;
+	std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
+    
+	SpatialiserCore* spatializer;
 	try
 	{
-		spatializer = SpatializerCore::instance(state->samplerate, state->dspbuffersize);
+		spatializer = SpatialiserCore::instance(state->samplerate, state->dspbuffersize);
 	}
-	catch (const SpatializerCore::IncorrectAudioStateException& e)
+	catch (const SpatialiserCore::IncorrectAudioStateException& e)
 	{
 		WriteLog (std::string ("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 	}
 
+    EffectData* data = state->GetEffectData<EffectData>();
+    
     /*
 	if (source == nullptr)
 	{
@@ -469,24 +437,23 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK GetFloatParameterCallback(UnityAud
 	return UNITY_AUDIODSP_OK;
 }
 
-/////////////////////////////////////////////////////////////////////
-
 int UNITY_AUDIODSP_CALLBACK GetFloatBufferCallback(UnityAudioEffectState* state, const char* name, float* buffer, int numsamples)
 {
 	return UNITY_AUDIODSP_OK;
 }
 
-/////////////////////////////////////////////////////////////////////
-
-UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ProcessCallback(UnityAudioEffectState* state, float* inbuffer, float* outbuffer, unsigned int length, int inchannels, int outchannels)
+UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK
+ProcessCallback (UnityAudioEffectState* state, float* inbuffer, float* outbuffer,
+                 unsigned int length, int inchannels, int outchannels)
 {
-	std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
-	SpatializerCore* spatializer;
+	std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
+    
+	SpatialiserCore* spatializer;
 	try
 	{
-		spatializer = SpatializerCore::instance(state->samplerate, state->dspbuffersize);
+		spatializer = SpatialiserCore::instance(state->samplerate, state->dspbuffersize);
 	}
-	catch (const SpatializerCore::IncorrectAudioStateException& e)
+	catch (const SpatialiserCore::IncorrectAudioStateException& e)
 	{
 		WriteLog(std::string("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;

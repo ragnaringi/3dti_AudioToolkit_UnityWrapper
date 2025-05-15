@@ -1,24 +1,15 @@
 /**
-*** 3D-Tune-In Toolkit Unity Reverb ***
-*
-* version alpha 1.1
-* Created on: June 2016
-*
-* Author: 3DI-DIANA Research Group / University of Malaga / Spain
-* Contact: areyes@uma.es
-*
-* Project: 3DTI (3D-games for TUNing and lEarnINg about hearing aids)
-* Module: 3DTI Toolkit Unity Wrapper
-*
-* Updated: June 2020 onwards
-* by Tim Murray-Browne at the Dyson School of Engineering, Imperial College London.
+ * BRT-Unity: Core
 **/
 
-#include "SpatializerCore.h"
+#include "SpatialiserCore.h"
+#include "AppUtils.h"
 
 //==============================================================================
 namespace BRTManager
 {
+    using namespace BRTSpatialiserCore;
+
 	enum Parameter
 	{
 		Wetness = 0,
@@ -32,17 +23,23 @@ namespace BRTManager
         CMonoBuffer<float> outRightBuffer;
 	};
 
-	std::atomic<bool> doesReverbInstanceExist(false);
+    std::atomic<bool> doesInstanceExist { false };
+
+    inline void WriteLog (std::string logText)
+    {
+        std::cerr << logText << std::endl;
+    }
 
     //==========================================================================
 	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback (UnityAudioEffectState* state)
 	{
-		if (doesReverbInstanceExist.exchange(true))
+		if (doesInstanceExist.exchange (true))
 		{
 			// There is already an instance
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
-		assert (doesReverbInstanceExist);
+        
+		assert (doesInstanceExist);
 
         auto effectdata = new EffectData;
         effectdata->outLeftBuffer.resize (state->dspbuffersize);
@@ -60,62 +57,71 @@ namespace BRTManager
         if (EffectData* data = state->GetEffectData<EffectData>())
             delete data;
         
-        assert(doesReverbInstanceExist);
-        doesReverbInstanceExist = false;
+        assert (doesInstanceExist);
+        doesInstanceExist = false;
         
         return UNITY_AUDIODSP_OK;
     }
 
-	int InternalRegisterEffectDefinition(UnityAudioEffectDefinition& definition)
+	int InternalRegisterEffectDefinition (UnityAudioEffectDefinition& definition)
 	{
 		definition.paramdefs = new UnityAudioParameterDefinition[NumParameters];
-		//RegisterParameter(definition, "Enable Reverb", "", 0, 1, 1.0f, 0.0f, 1.0f, EnableReverb, "Enable reverb processing (0.0 for off, non-zero for on");
-		RegisterParameter(definition, "Wetness", "", 0.0f, 1.0f, 0.5f, 1.0f, 1.0f, Wetness, "Ratio of reverb to dry audio in output mix");
+		RegisterParameter (definition, "Wetness", "", 0.0f, 1.0f, 0.5f,
+                           1.0f, 1.0f, Wetness, "Ratio of reverb to dry audio in output mix");
 		return NumParameters;
 	}
 
-	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK SetFloatParameterCallback(UnityAudioEffectState* state, int index, float value)
+	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK
+    SetFloatParameterCallback (UnityAudioEffectState* state, int index, float value)
 	{
 		EffectData* data = state->GetEffectData<EffectData>();
-		if (index < 0 || index >= NumParameters || data == nullptr)
+		
+        if (index < 0 || index >= NumParameters || data == nullptr)
 		{
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
-		// As we need to lock the core spatializer mutex anyway during processing then we reuse it here
-        std::lock_guard<std::mutex> lock (SpatializerCore3DTI::SpatializerCore::mutex());
+        
+        std::lock_guard<std::mutex> lock (BRTSpatialiserCore::SpatialiserCore::mutex());
 		data->parameters[index] = value;
-		return UNITY_AUDIODSP_OK;
+		
+        return UNITY_AUDIODSP_OK;
 	}
 
-	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK GetFloatParameterCallback(UnityAudioEffectState* state, int index, float* value, char *valuestr)
+	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK
+    GetFloatParameterCallback (UnityAudioEffectState* state, int index, float* value, char *valuestr)
 	{
 		EffectData* data = state->GetEffectData<EffectData>();
+        
 		if (index < 0 || index >= NumParameters || data == nullptr)
 		{
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 		}
-		// As we need to lock spatializer mutex anyway during processing then we reuse it here
-        std::lock_guard<std::mutex> lock (SpatializerCore3DTI::SpatializerCore::mutex());
+		
+        std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
 		*value = data->parameters[index];
-		return UNITY_AUDIODSP_OK;
+		
+        return UNITY_AUDIODSP_OK;
 	}
 
-	int UNITY_AUDIODSP_CALLBACK GetFloatBufferCallback(UnityAudioEffectState* state, const char* name, float* buffer, int numsamples)
+	int UNITY_AUDIODSP_CALLBACK
+    GetFloatBufferCallback (UnityAudioEffectState* state, const char* name, float* buffer, int numsamples)
 	{
 		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
 	}
 
-	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK ProcessCallback (UnityAudioEffectState* state, float* inbuffer, float* outbuffer,
-                                                                   unsigned int length, int inchannels, int outchannels)
+	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK
+    ProcessCallback (UnityAudioEffectState* state, float* inbuffer, float* outbuffer,
+                     unsigned int length, int inchannels, int outchannels)
 	{
-        std::lock_guard<std::mutex> lock (SpatializerCore3DTI::SpatializerCore::mutex());
+        std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
 		
-        SpatializerCore3DTI::SpatializerCore* spatializer;
+        SpatialiserCore* spatializer;
+        
 		try
 		{
-            spatializer = SpatializerCore3DTI::SpatializerCore::instance(state->samplerate, state->dspbuffersize);
+            spatializer = SpatialiserCore::instance (state->samplerate, state->dspbuffersize);
 		}
-        catch (const SpatializerCore3DTI::SpatializerCore::IncorrectAudioStateException& e)
+        catch (const SpatialiserCore::IncorrectAudioStateException& e)
 		{
 			WriteLog (std::string("Error: Reverb ProcessCallback called with incorrect audio state. ") + e.what());
 			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
@@ -143,5 +149,4 @@ namespace BRTManager
 
 		return UNITY_AUDIODSP_OK;
 	}
-
 }

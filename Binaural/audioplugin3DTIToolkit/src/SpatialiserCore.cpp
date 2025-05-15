@@ -1,25 +1,29 @@
 
-#include "SpatializerCore.h"
+#include "SpatialiserCore.h"
 #include "AppUtils.h"
 
-namespace SpatializerCore3DTI
+namespace BRTSpatialiserCore
 {
+    inline void WriteLog (std::string logText)
+    {
+        std::cerr << logText << std::endl;
+    }
+
 	extern "C" UNITY_AUDIODSP_EXPORT_API bool Reset3DTISpatializerIfNeeded(int sampleRate, int dspBufferSize)
 	{
-		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
+		std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
 
-		return SpatializerCore::resetInstanceIfNecessary(sampleRate, dspBufferSize);
+		return SpatialiserCore::resetInstanceIfNecessary(sampleRate, dspBufferSize);
 	}
-
 
 	extern "C" UNITY_AUDIODSP_EXPORT_API bool Load3DTISpatializerBinary(BinaryRole role, const char* path, int currentSampleRate, int dspBufferSize) 
 	{
-		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
+		std::lock_guard<std::mutex> lock(SpatialiserCore::mutex());
 
-		SpatializerCore* instance = SpatializerCore::instance(currentSampleRate, dspBufferSize);
+		SpatialiserCore* instance = SpatialiserCore::instance(currentSampleRate, dspBufferSize);
 		if (instance == nullptr)
 		{
-			WriteLog("Error: setup3DTISpatializer called with incorrect sample rate or buffer size.");
+			WriteLog ("Error: setup3DTISpatializer called with incorrect sample rate or buffer size.");
 			return false;
 		}
 		return instance->loadBinary(role, path);
@@ -27,9 +31,9 @@ namespace SpatializerCore3DTI
 
 	extern "C" UNITY_AUDIODSP_EXPORT_API bool Set3DTISpatializerFloat(int parameter, float value)
 	{
-		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
+		std::lock_guard<std::mutex> lock(SpatialiserCore::mutex());
 
-		SpatializerCore* spatializer = SpatializerCore::instance();
+		SpatialiserCore* spatializer = SpatialiserCore::instance();
 		if (spatializer == nullptr)
 		{
 			return false;
@@ -37,14 +41,13 @@ namespace SpatializerCore3DTI
 		return spatializer->SetFloat(parameter, value);
 	}
 
-
 	extern "C" UNITY_AUDIODSP_EXPORT_API bool Get3DTISpatializerFloat(int parameter, float* value)
 	{
 		assert(value != nullptr);
 
-		std::lock_guard<std::mutex> lock(SpatializerCore::mutex());
+		std::lock_guard<std::mutex> lock(SpatialiserCore::mutex());
 
-		SpatializerCore* spatializer = SpatializerCore::instance();
+		SpatialiserCore* spatializer = SpatialiserCore::instance();
 
 		return spatializer->GetFloat(parameter, value);
 	}
@@ -54,7 +57,7 @@ namespace SpatializerCore3DTI
     const std::string LISTENER_BRIR_MODEL_ID = "listenerAmbisonicBRIR";
     const std::string SOUND_SOURCE_ID = "soundSource";
 
-	SpatializerCore::SpatializerCore(UInt32 sampleRate, UInt32 bufferSize)
+	SpatialiserCore::SpatialiserCore(UInt32 sampleRate, UInt32 bufferSize)
 		: scaleFactor(1.0f)
 		, isLimiterEnabled(true)
 		, enableReverbProcessing(false)
@@ -94,13 +97,13 @@ namespace SpatializerCore3DTI
 	}
 
 
-	SpatializerCore::~SpatializerCore()
+	SpatialiserCore::~SpatialiserCore()
 	{
 		assert(instancePtr() == this);
 		instancePtr() = nullptr;
 	}
 
-	bool SpatializerCore::loadBinary (BinaryRole role, std::string path)
+	bool SpatialiserCore::loadBinary (BinaryRole role, std::string path)
 	{
 		const std::string sofaExtension = ".sofa";
 		const bool hasSofaExtension = path.size() >= sofaExtension.size() && path.substr(path.size() - sofaExtension.size()) == sofaExtension;
@@ -169,7 +172,7 @@ namespace SpatializerCore3DTI
 		}
 	}
 
-	bool SpatializerCore::SetFloat(int parameter, float value)
+	bool SpatialiserCore::SetFloat(int parameter, float value)
 	{
         WriteLog ("BRT: Setting parameter " + std::to_string (parameter) + " : " + std::to_string (value));
         
@@ -317,8 +320,7 @@ namespace SpatializerCore3DTI
 		}
 	}
 
-
-	bool SpatializerCore::GetFloat(int parameter, float* value)
+	bool SpatialiserCore::GetFloat (int parameter, float* value)
 	{
 		assert(value != nullptr);
 		if (value == nullptr)
@@ -391,12 +393,12 @@ namespace SpatializerCore3DTI
 		}
 	}
 
-	SpatializerCore* SpatializerCore::instance(UInt32 sampleRate, UInt32 bufferSize)
+	SpatialiserCore* SpatialiserCore::instance(UInt32 sampleRate, UInt32 bufferSize)
 	{
-		SpatializerCore*& s = instancePtr();
+		SpatialiserCore*& s = instancePtr();
 		if (s == nullptr)
 		{
-			s = new SpatializerCore (sampleRate, bufferSize);
+			s = new SpatialiserCore (sampleRate, bufferSize);
 		}
         if (s->globalParameters.GetSampleRate() != sampleRate ||s->globalParameters.GetBufferSize() != bufferSize)
 		{
@@ -405,14 +407,14 @@ namespace SpatializerCore3DTI
 		return s;
 	}
 
-	SpatializerCore* SpatializerCore::instance()
+	SpatialiserCore* SpatialiserCore::instance()
 	{
 		return instancePtr();
 	}
 
-	bool SpatializerCore::resetInstanceIfNecessary (UInt32 sampleRate, UInt32 bufferSize)
+	bool SpatialiserCore::resetInstanceIfNecessary (UInt32 sampleRate, UInt32 bufferSize)
 	{
-		SpatializerCore*& s = instancePtr();
+		SpatialiserCore*& s = instancePtr();
         if (s != nullptr && (s->globalParameters.GetSampleRate() != sampleRate || s->globalParameters.GetBufferSize() != bufferSize))
 		{
 			delete s;
@@ -420,15 +422,15 @@ namespace SpatializerCore3DTI
 		}
 		if (s == nullptr)
 		{
-			s = new SpatializerCore(sampleRate, bufferSize);
+			s = new SpatialiserCore(sampleRate, bufferSize);
 			return true;
 		}
 		return false;
 	}
 
-	SpatializerCore*& SpatializerCore::instancePtr()
+	SpatialiserCore*& SpatialiserCore::instancePtr()
 	{
-		static SpatializerCore* s = nullptr;
+		static SpatialiserCore* s = nullptr;
 		return s;
 	}
 
