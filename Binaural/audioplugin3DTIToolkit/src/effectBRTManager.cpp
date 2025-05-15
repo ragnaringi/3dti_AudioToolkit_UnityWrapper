@@ -16,17 +16,14 @@
 
 #include "SpatializerCore.h"
 
-using namespace std;
-
 //==============================================================================
-namespace SpatialiserCore3DTI
+namespace BRTManager
 {
 	enum Parameter
 	{
 		Wetness = 0,
 		NumParameters = 1
 	};
-
 
 	struct EffectData
 	{

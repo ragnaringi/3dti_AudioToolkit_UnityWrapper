@@ -13,12 +13,7 @@
 * by Tim Murray-Browne at the Dyson School of Engineering, Imperial College London.
 **/
 
-#include <fstream>
-#include <iostream>
-#include <mutex>
-#include <sstream>
-#include <cstdint>
-#include "effect3DTISpatializerSource.h"
+#include "SpatializerCore.h"
 
 enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOAD_END = 2, RESULT_LOAD_OK = 3, RESULT_LOAD_ERROR = -1 };
 
@@ -38,7 +33,7 @@ enum TLoadResult { RESULT_LOAD_WAITING = 0, RESULT_LOAD_CONTINUE = 1, RESULT_LOA
 
 /////////////////////////////////////////////////////////////////////
 
-namespace SpatializerSource3DTI
+namespace BRTBinauralSpatialiser
 {
 	using namespace SpatializerCore3DTI;
 
@@ -55,19 +50,7 @@ namespace SpatializerSource3DTI
 		std::cerr << logText << " " << value;
         std::cerr << " (source " << sourceID << ")";
 		std::cerr << std::endl;
-		//
-		//    if (spatializer().debugLog)
-		//    {
-		//#ifdef DEBUG_LOG_FILE_BINSP
-		//        ofstream logfile;
-		//        logfile.open("3DTI_BinauralSpatializer_DebugLog.txt", ofstream::out | ofstream::app);
-		//        if (sourceID != -1)
-		//            logfile << sourceID << ": " << logtext << value << endl;
-		//        else
-		//            logfile << logtext << value << endl;
-		//        logfile.close();
-		//#endif
-		//        
+
 		//#ifdef DEBUG_LOG_CAT
 		//        std::ostringstream os;
 		//        os << logtext << value;
@@ -196,6 +179,106 @@ static UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK DistanceAttenuationCallback
 	return UNITY_AUDIODSP_OK;
 }
 
+// Mutex must be locked when calling this
+UNITY_AUDIODSP_RESULT SetFloatParameter (SpatializerCore* spatializer, UnityAudioEffectState* state, int index, float value)
+{
+    EffectData* data = state->GetEffectData<EffectData>();
+    assert (data != nullptr && spatializer != nullptr);
+
+    // Process command sent by C# API
+    switch (index)
+    {
+
+    case FloatParameter::EnableHRTFInterpolation:
+        if (value != 0.0f)
+        {
+//            data->audioSource->EnableInterpolation();
+        }
+        else
+        {
+//            data->audioSource->DisableInterpolation();
+        }
+//        break;
+    case FloatParameter::EnableFarDistanceLPF:
+        if (value > 0.0f)
+        {
+//            data->audioSource->EnableFarDistanceEffect();
+            WriteLog(state, "SET PARAMETER: Far distance LPF is ", "Enabled");
+        }
+        else
+        {
+//            data->audioSource->DisableFarDistanceEffect();
+        }
+        break;
+    case FloatParameter::EnableDistanceAttenuationAnechoic:
+        if (value > 0.0f)
+        {
+//            data->audioSource->EnableDistanceAttenuationAnechoic();
+//            WriteLog(state, "SET PARAMETER: Distance attenuation is ", "Enabled");
+        }
+        else
+        {
+//            data->audioSource->DisableDistanceAttenuationAnechoic();
+//            WriteLog(state, "SET PARAMETER: Distance attenuation is ", "Disabled");
+        }
+    case FloatParameter::EnableNearFieldEffect:
+        if (value > 0.0f)
+        {
+//            data->audioSource->EnableNearFieldEffect();
+        }
+        else
+        {
+//            data->audioSource->DisableNearFieldEffect();
+        }
+//        break;
+    case FloatParameter::SpatializationMode:
+//        if (value == (float)Binaural::TSpatializationMode::HighQuality)
+//        {
+//            data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighQuality);
+//        }
+//        else if (value == (float)Binaural::TSpatializationMode::HighPerformance)
+//        {
+//            data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighPerformance);
+//        }
+//        else if (value == (float)Binaural::TSpatializationMode::NoSpatialization)
+//        {
+//            data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::NoSpatialization);
+//            WriteLog(state, "SET PARAMETER: No spatialization mode is enabled", "");
+//        }
+//        else
+//        {
+//            return UNITY_AUDIODSP_ERR_UNSUPPORTED;
+//        }
+//        break;
+    case FloatParameter::EnableReverbSend:
+//        WriteLog ("BRT: Enable Reverb send: " + std::to_string (value));
+        if (value != 0.0f)
+        {
+//            data->audioSource->EnableReverbProcess();
+        }
+        else
+        {
+//            data->audioSource->DisableReverbProcess();
+        }
+//        break;
+    case FloatParameter::EnableDistanceAttenuationReverb:
+        if (value != 0.0f)
+        {
+//            data->audioSource->EnableDistanceAttenuationReverb();
+        }
+        else
+        {
+//            data->audioSource->DisableDistanceAttenuationReverb();
+        }
+//        break;
+    default:
+        WriteLog (state, "SET PARAMETER: ERROR!!!! Unknown float parameter received from API: ", index);
+        return UNITY_AUDIODSP_ERR_UNSUPPORTED;
+    }
+
+    return UNITY_AUDIODSP_OK;
+}
+
 //==============================================================================
 UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback (UnityAudioEffectState* state)
 {
@@ -322,106 +405,6 @@ UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK SetFloatParameterCallback(UnityAud
 	}
 	assert(spatializer != nullptr);
 	return SetFloatParameter(spatializer, state, index, value);
-}
-
-// Mutex must be locked when calling this
-UNITY_AUDIODSP_RESULT SetFloatParameter(SpatializerCore* spatializer, UnityAudioEffectState* state, int index, float value)
-{
-	EffectData* data = state->GetEffectData<EffectData>();
-    assert (data != nullptr && spatializer != nullptr);
-
-	// Process command sent by C# API
-	switch (index)
-	{
-
-	case FloatParameter::EnableHRTFInterpolation:
-		if (value != 0.0f)
-		{
-//			data->audioSource->EnableInterpolation();
-		}
-		else
-		{
-//			data->audioSource->DisableInterpolation();
-		}
-//		break;
-	case FloatParameter::EnableFarDistanceLPF:
-		if (value > 0.0f)
-		{
-//			data->audioSource->EnableFarDistanceEffect();
-			WriteLog(state, "SET PARAMETER: Far distance LPF is ", "Enabled");
-		}
-		else
-		{
-//			data->audioSource->DisableFarDistanceEffect();
-		}
-		break;
-	case FloatParameter::EnableDistanceAttenuationAnechoic:
-		if (value > 0.0f)
-		{
-//			data->audioSource->EnableDistanceAttenuationAnechoic();
-//			WriteLog(state, "SET PARAMETER: Distance attenuation is ", "Enabled");
-		}
-		else
-		{
-//			data->audioSource->DisableDistanceAttenuationAnechoic();
-//			WriteLog(state, "SET PARAMETER: Distance attenuation is ", "Disabled");
-		}
-	case FloatParameter::EnableNearFieldEffect:
-		if (value > 0.0f)
-		{
-//			data->audioSource->EnableNearFieldEffect();
-		}
-		else
-		{
-//			data->audioSource->DisableNearFieldEffect();
-		}
-//		break;
-	case FloatParameter::SpatializationMode:
-//		if (value == (float)Binaural::TSpatializationMode::HighQuality)
-//		{
-//			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighQuality);
-//		}
-//		else if (value == (float)Binaural::TSpatializationMode::HighPerformance)
-//		{
-//			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::HighPerformance);
-//		}
-//		else if (value == (float)Binaural::TSpatializationMode::NoSpatialization)
-//		{
-//			data->audioSource->SetSpatializationMode(Binaural::TSpatializationMode::NoSpatialization);
-//			WriteLog(state, "SET PARAMETER: No spatialization mode is enabled", "");
-//		}
-//		else
-//		{
-//			return UNITY_AUDIODSP_ERR_UNSUPPORTED;
-//		}
-//		break;
-	case FloatParameter::EnableReverbSend:
-//        WriteLog ("BRT: Enable Reverb send: " + std::to_string (value));
-		if (value != 0.0f)
-		{
-//			data->audioSource->EnableReverbProcess();
-		}
-		else
-		{
-//			data->audioSource->DisableReverbProcess();
-		}
-//		break;
-	case FloatParameter::EnableDistanceAttenuationReverb:
-		if (value != 0.0f)
-		{
-//			data->audioSource->EnableDistanceAttenuationReverb();
-		}
-		else
-		{
-//			data->audioSource->DisableDistanceAttenuationReverb();
-		}
-//		break;
-	default:
-		WriteLog (state, "SET PARAMETER: ERROR!!!! Unknown float parameter received from API: ", index);
-		return UNITY_AUDIODSP_ERR_UNSUPPORTED;
-	}
-
-	return UNITY_AUDIODSP_OK;
 }
 
 /////////////////////////////////////////////////////////////////////
