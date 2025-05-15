@@ -212,39 +212,25 @@ namespace API_3DTI
             }
         }
 
-#if UNITY_IPHONE
-    [DllImport ("__Internal")]
-#else
-        [DllImport("AudioPlugin3DTIToolkit")]
-#endif
+    #if UNITY_IOS && !UNITY_EDITOR
+        private const string DLL_NAME = "__Internal";
+    #else
+        private const string DLL_NAME = "AudioPlugin3DTIToolkit";
+    #endif
+
+        [DllImport(DLL_NAME)]
         private static extern bool Load3DTISpatializerBinary(int role, string path, int sampleRate, int dspBufferSize);
 
-
-#if UNITY_IPHONE
-    [DllImport ("__Internal")]
-#else
-        [DllImport("AudioPlugin3DTIToolkit")]
-#endif
+        [DllImport(DLL_NAME)]
         private static extern bool Set3DTISpatializerFloat(int parameterID, float value);
 
-
-#if UNITY_IPHONE
-    [DllImport ("__Internal")]
-#else
-        [DllImport("AudioPlugin3DTIToolkit")]
-#endif
+        [DllImport(DLL_NAME)]
         private static extern bool Get3DTISpatializerFloat(int parameterID, out float value);
 
-
-        /// Test if a Spatializer instance has been created. This can only be done by adding the SpatializerCore 
-        /// effect to a mixer. Currently only one instance is supported
-#if UNITY_IPHONE
-    [DllImport ("__Internal")]
-#else
-        [DllImport("AudioPlugin3DTIToolkit")]
-#endif
-        private static extern bool Reset3DTISpatializerIfNeeded(int sampleRate, int dspBufferSize);
-
+        // Test if a Spatializer instance has been created. This can only be done by adding the SpatializerCore 
+        // effect to a mixer. Currently only one instance is supported
+        [DllImport(DLL_NAME)]
+        private static extern bool BRTResetSpatialiserIfNeeded(int sampleRate, int dspBufferSize);
 
 
         private void Awake()
@@ -272,8 +258,9 @@ namespace API_3DTI
                 }
 
                 AudioSettings.GetDSPBufferSize(out int dspBufferSize, out _);
-                Reset3DTISpatializerIfNeeded(AudioSettings.outputSampleRate, dspBufferSize);
+                BRTResetSpatialiserIfNeeded(AudioSettings.outputSampleRate, dspBufferSize);
                 sendAllBinaryResourcePathsToPlugin();
+
                 for (int i = 0; i < NumParameters; i++)
                 {
                     if (!Set3DTISpatializerFloat(i, spatializerParameters[i]))
@@ -288,7 +275,8 @@ namespace API_3DTI
         void Start()
         {
             AudioSettings.GetDSPBufferSize(out int dspBufferSize, out _);
-            if (Reset3DTISpatializerIfNeeded(AudioSettings.outputSampleRate, dspBufferSize))
+
+            if (BRTResetSpatialiserIfNeeded(AudioSettings.outputSampleRate, dspBufferSize))
             {
                 for (int i = 0; i < NumParameters; i++)
                 {

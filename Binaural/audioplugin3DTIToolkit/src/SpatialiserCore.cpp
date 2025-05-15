@@ -9,7 +9,7 @@ namespace BRTSpatialiserCore
         std::cerr << logText << std::endl;
     }
 
-	extern "C" UNITY_AUDIODSP_EXPORT_API bool Reset3DTISpatializerIfNeeded(int sampleRate, int dspBufferSize)
+	extern "C" UNITY_AUDIODSP_EXPORT_API bool BRTResetSpatialiserIfNeeded (int sampleRate, int dspBufferSize)
 	{
 		std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
 
