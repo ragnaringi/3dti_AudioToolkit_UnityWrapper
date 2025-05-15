@@ -581,7 +581,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902003435}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TestFunctions, Assembly-CSharp
         m_MethodName: EnableReverb
         m_Mode: 0
@@ -1283,13 +1283,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d3e47873e845404fa98d69278291f61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hlMixer: {fileID: 24100000, guid: 02d04237d0308a14ea0c3b720849faae, type: 2}
-  PARAM_CLASSIFICATION_CURVE_LEFT: 5
-  PARAM_CLASSIFICATION_SLOPE_LEFT: 0
-  PARAM_CLASSIFICATION_SEVERITY_LEFT: 6
-  PARAM_CLASSIFICATION_CURVE_RIGHT: 6
-  PARAM_CLASSIFICATION_SLOPE_RIGHT: 6
-  PARAM_CLASSIFICATION_SEVERITY_RIGHT: 6
 --- !u!114 &963194231
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1302,7 +1295,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef6b4806b154c4644a96d122f1e56183, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  haMixer: {fileID: 24100000, guid: 02d04237d0308a14ea0c3b720849faae, type: 2}
 --- !u!114 &963194232
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1513,7 +1505,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902003435}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TestFunctions, Assembly-CSharp
         m_MethodName: EnableSpatialize
         m_Mode: 0
@@ -2020,7 +2012,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902003435}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TestFunctions, Assembly-CSharp
         m_MethodName: EnableHAInBothEars
         m_Mode: 0
@@ -2605,7 +2597,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902003435}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TestFunctions, Assembly-CSharp
         m_MethodName: EnableHearingLossInBothEars
         m_Mode: 0
@@ -2618,60 +2610,6 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
   m_IsOn: 0
---- !u!1 &1902003434
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1902003436}
-  - component: {fileID: 1902003435}
-  m_Layer: 0
-  m_Name: TestFunctions
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1902003435
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1902003434}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5eb6f6405b1effc47bc527250b9e486a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  HearingAid: {fileID: 963194231}
-  HearingLoss: {fileID: 963194230}
-  Spatializer: {fileID: 963194229}
-  SphereSpawner: {fileID: 769662297}
-  SpatializeToggle: {fileID: 1038751606}
-  HearingLossToggle: {fileID: 1705920704}
-  HearingAidToggle: {fileID: 1426890340}
-  ReverbToggle: {fileID: 504459197}
-  SoakTestMaxNumSources: 50
-  isSpatializeEnabled: 1
---- !u!4 &1902003436
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1902003434}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.0603464, y: 2.1306539, z: 0.38748398}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1928568497
 GameObject:
   m_ObjectHideFlags: 0
@@ -2915,7 +2853,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902003435}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: TestFunctions, Assembly-CSharp
         m_MethodName: EnableSoakTest
         m_Mode: 0
@@ -2928,135 +2866,6 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
   m_IsOn: 0
---- !u!1 &2060347687
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2060347689}
-  - component: {fileID: 2060347688}
-  m_Layer: 0
-  m_Name: DummySound
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!82 &2060347688
-AudioSource:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2060347687}
-  m_Enabled: 1
-  serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 78b7aef93a91e4e218729dbbc9fc8db7, type: 3}
-  m_PlayOnAwake: 1
-  m_Volume: 0.194
-  m_Pitch: 1
-  Loop: 0
-  Mute: 0
-  Spatialize: 1
-  SpatializePostEffects: 0
-  Priority: 128
-  DopplerLevel: 1
-  MinDistance: 1
-  MaxDistance: 500
-  Pan2D: 0
-  rolloffMode: 0
-  BypassEffects: 0
-  BypassListenerEffects: 0
-  BypassReverbZones: 0
-  rolloffCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  panLevelCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  spreadCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  reverbZoneMixCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
---- !u!4 &2060347689
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2060347687}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2126364867
 GameObject:
   m_ObjectHideFlags: 0
@@ -3119,8 +2928,6 @@ SceneRoots:
   - {fileID: 705507995}
   - {fileID: 984343545}
   - {fileID: 2126364869}
-  - {fileID: 2060347689}
   - {fileID: 1315974547}
   - {fileID: 7444558}
   - {fileID: 769662298}
-  - {fileID: 1902003436}
