@@ -9,14 +9,16 @@ namespace BRTSpatialiserCore
         std::cerr << logText << std::endl;
     }
 
-	extern "C" UNITY_AUDIODSP_EXPORT_API bool BRTResetSpatialiserIfNeeded (int sampleRate, int dspBufferSize)
+	extern "C" UNITY_AUDIODSP_EXPORT_API
+    bool BRTSpatialiserResetIfNeeded (int sampleRate, int dspBufferSize)
 	{
 		std::lock_guard<std::mutex> lock (SpatialiserCore::mutex());
 
 		return SpatialiserCore::resetInstanceIfNecessary(sampleRate, dspBufferSize);
 	}
 
-	extern "C" UNITY_AUDIODSP_EXPORT_API bool Load3DTISpatializerBinary(BinaryRole role, const char* path, int currentSampleRate, int dspBufferSize) 
+	extern "C" UNITY_AUDIODSP_EXPORT_API
+    bool BRTSpatialiserLoadBinary (BinaryRole role, const char* path, int currentSampleRate, int dspBufferSize)
 	{
 		std::lock_guard<std::mutex> lock(SpatialiserCore::mutex());
 
@@ -29,7 +31,8 @@ namespace BRTSpatialiserCore
 		return instance->loadBinary(role, path);
 	}
 
-	extern "C" UNITY_AUDIODSP_EXPORT_API bool Set3DTISpatializerFloat(int parameter, float value)
+	extern "C" UNITY_AUDIODSP_EXPORT_API
+    bool BRTSpatialiserSetFloat (int parameter, float value)
 	{
 		std::lock_guard<std::mutex> lock(SpatialiserCore::mutex());
 
@@ -41,7 +44,8 @@ namespace BRTSpatialiserCore
 		return spatializer->SetFloat(parameter, value);
 	}
 
-	extern "C" UNITY_AUDIODSP_EXPORT_API bool Get3DTISpatializerFloat(int parameter, float* value)
+	extern "C" UNITY_AUDIODSP_EXPORT_API
+    bool BRTSpatialiserGetFloat (int parameter, float* value)
 	{
 		assert(value != nullptr);
 
@@ -57,10 +61,10 @@ namespace BRTSpatialiserCore
     const std::string LISTENER_BRIR_MODEL_ID = "listenerAmbisonicBRIR";
     const std::string SOUND_SOURCE_ID = "soundSource";
 
-	SpatialiserCore::SpatialiserCore(UInt32 sampleRate, UInt32 bufferSize)
-		: scaleFactor(1.0f)
-		, isLimiterEnabled(true)
-		, enableReverbProcessing(false)
+	SpatialiserCore::SpatialiserCore (UInt32 sampleRate, UInt32 bufferSize)
+      : scaleFactor (1.0f),
+        isLimiterEnabled (true),
+        enableReverbProcessing (false)
 	{
 		perSourceInitialValues[EnableHRTFInterpolation] = 1.0f;
 		perSourceInitialValues[EnableFarDistanceLPF] = 1.0f;

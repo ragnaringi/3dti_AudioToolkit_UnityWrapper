@@ -219,18 +219,18 @@ namespace API_3DTI
     #endif
 
         [DllImport(DLL_NAME)]
-        private static extern bool Load3DTISpatializerBinary(int role, string path, int sampleRate, int dspBufferSize);
+        private static extern bool BRTSpatialiserLoadBinary(int role, string path, int sampleRate, int dspBufferSize);
 
         [DllImport(DLL_NAME)]
-        private static extern bool Set3DTISpatializerFloat(int parameterID, float value);
+        private static extern bool BRTSpatialiserSetFloat(int parameterID, float value);
 
         [DllImport(DLL_NAME)]
-        private static extern bool Get3DTISpatializerFloat(int parameterID, out float value);
+        private static extern bool BRTSpatialiserGetFloat(int parameterID, out float value);
 
         // Test if a Spatializer instance has been created. This can only be done by adding the SpatializerCore 
         // effect to a mixer. Currently only one instance is supported
         [DllImport(DLL_NAME)]
-        private static extern bool BRTResetSpatialiserIfNeeded(int sampleRate, int dspBufferSize);
+        private static extern bool BRTSpatialiserResetIfNeeded(int sampleRate, int dspBufferSize);
 
 
         private void Awake()
@@ -258,12 +258,12 @@ namespace API_3DTI
                 }
 
                 AudioSettings.GetDSPBufferSize(out int dspBufferSize, out _);
-                BRTResetSpatialiserIfNeeded(AudioSettings.outputSampleRate, dspBufferSize);
+                BRTSpatialiserResetIfNeeded(AudioSettings.outputSampleRate, dspBufferSize);
                 sendAllBinaryResourcePathsToPlugin();
 
                 for (int i = 0; i < NumParameters; i++)
                 {
-                    if (!Set3DTISpatializerFloat(i, spatializerParameters[i]))
+                    if (!BRTSpatialiserSetFloat(i, spatializerParameters[i]))
                     {
                         Debug.LogError($"Failed to set 3DTI parameter {i}.", this);
                     }
@@ -276,11 +276,11 @@ namespace API_3DTI
         {
             AudioSettings.GetDSPBufferSize(out int dspBufferSize, out _);
 
-            if (BRTResetSpatialiserIfNeeded(AudioSettings.outputSampleRate, dspBufferSize))
+            if (BRTSpatialiserResetIfNeeded(AudioSettings.outputSampleRate, dspBufferSize))
             {
                 for (int i = 0; i < NumParameters; i++)
                 {
-                    if (!Set3DTISpatializerFloat(i, spatializerParameters[i]))
+                    if (!BRTSpatialiserSetFloat(i, spatializerParameters[i]))
                     {
                         Debug.LogError($"Failed to set 3DTI parameter {i}.", this);
                     }
@@ -330,12 +330,12 @@ namespace API_3DTI
             }
             else
             {
-                if (!Set3DTISpatializerFloat((int)parameter, value))
+                if (!BRTSpatialiserSetFloat((int)parameter, value))
                 {
                     Debug.LogError($"Failed to set parameter {parameter} on 3DTI Spatializer plugin.", this);
                     return false;
                 }
-                if (!Get3DTISpatializerFloat((int)parameter, out spatializerParameters[(int)parameter]))
+                if (!BRTSpatialiserGetFloat((int)parameter, out spatializerParameters[(int)parameter]))
                 {
                     Debug.LogError($"Failed to retrieve value of parameter {parameter} from 3DTI Spatializer plugin after setting it.", this);
                     return false;
@@ -370,7 +370,7 @@ namespace API_3DTI
                     }
                 }
             }
-            if (!Get3DTISpatializerFloat((int)parameter, out value))
+            if (!BRTSpatialiserGetFloat((int)parameter, out value))
             {
                 Debug.LogError($"Failed to retrieve parameter {parameter} from 3DTI Spatializer plugin.", this);
                 return false;
@@ -474,23 +474,19 @@ namespace API_3DTI
 
             if (path.Length == 0)
             {
-                // Debug.Log("LOADING BINARY: " + path);
-                Load3DTISpatializerBinary((int)role, path, AudioSettings.outputSampleRate, dspBufferSize);
+                BRTSpatialiserLoadBinary((int)role, path, AudioSettings.outputSampleRate, dspBufferSize);
             }
-            else if (!(SaveResourceAsFile(path, out string newPath) && Load3DTISpatializerBinary((int)role, newPath, AudioSettings.outputSampleRate, dspBufferSize)))
+            else if (!(SaveResourceAsFile(path, out string newPath) && BRTSpatialiserLoadBinary((int)role, newPath, AudioSettings.outputSampleRate, dspBufferSize)))
             {
-                // Debug.Log("LOADING BINARY: " + path);
                 Debug.LogError($"Failed to load Spatializer binary resource {path} for {role} at sample rate {AudioSettings.outputSampleRate}.");
                 // return false;
             }
-            // Debug.Log("DID NOT LOAD BINARY: " + path);
             return true;
         }
 
 
         private bool sendAllBinaryResourcePathsToPlugin()
         {
-            Debug.Log("!!!!! sendAllBinaryResourcePathsToPlugin() !!!!");
             if (!GetSampleRate(out TSampleRateEnum sr))
             {
                 return false;
@@ -570,15 +566,11 @@ namespace API_3DTI
 #if (UNITY_EDITOR)
                     UnityEditor.EditorApplication.isPlaying = false;
 #else
-                        Application.Quit();
+                    Application.Quit();
 #endif
                     sampleRate = TSampleRateEnum.K44;
                     return false;
             }
         }
-
-
     }
-
-
 }

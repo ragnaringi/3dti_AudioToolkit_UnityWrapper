@@ -30,8 +30,6 @@ inline void WriteLog (std::string logText)
 
 namespace BRTSpatialiserCore
 {
-	extern "C" UNITY_AUDIODSP_EXPORT_API bool Get3DTISpatializerFloat (int parameter, float* value);
-
 	// Parameters set outside of the unity Parameter system
 	enum FloatParameter : int
 	{
@@ -81,8 +79,7 @@ namespace BRTSpatialiserCore
 		NumBinaryRoles = 4,
 	};
 
-	/////////////////////////////////////////////////////////////////////
-
+	//==========================================================================
 	struct SpatialiserCore
 	{
 		// Each instance of the reverb effect has an instance of the Core
