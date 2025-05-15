@@ -1,6 +1,5 @@
 
 #include "SpatializerCore.h"
-#include "CommonUtils.h"
 #include "AppUtils.h"
 
 namespace SpatializerCore3DTI
@@ -191,14 +190,14 @@ namespace SpatializerCore3DTI
 			const float min = 0.0f;
 			const float max = 1e20f;
             if (auto hrtf = listener->GetHRTF())
-                hrtf->SetHeadRadius (clamp(value, min, max));
+                hrtf->SetHeadRadius (std::clamp (value, min, max));
 			return true;
 		}
 		case ScaleFactor:
 		{
 			const float min = 1e-20f;
 			const float max = 1e20f;
-			scaleFactor = clamp(value, min, max);
+			scaleFactor = std::clamp (value, min, max);
 			return true;
 		}
 		case EnableCustomITD:
@@ -220,7 +219,7 @@ namespace SpatializerCore3DTI
 		{
 			const float min = -30.0f;
 			const float max = 0.0f;
-            listener->SetDistanceAttenuationFactor (clamp(value, min, max));
+            listener->SetDistanceAttenuationFactor (std::clamp (value, min, max));
             return true;
 		}
 		case ILDAttenuation:
@@ -233,7 +232,7 @@ namespace SpatializerCore3DTI
 		{
 			const float min = 10.0f;
 			const float max = 1000.0f;
-            globalParameters.SetSoundSpeed (clamp(value, min, max));
+            globalParameters.SetSoundSpeed (std::clamp (value, min, max));
 			return true;
 		}
 		case HearingAidDirectionalityAttenuationLeft:
@@ -310,7 +309,7 @@ namespace SpatializerCore3DTI
 		{
 			const float min = -90.0f;
 			const float max = 0.0f;
-            listenerBRIRModel->SetDistanceAttenuationFactor (clamp(value, min, max));
+            listenerBRIRModel->SetDistanceAttenuationFactor (std::clamp (value, min, max));
 			return true;
 		}
 		default:

@@ -19,7 +19,7 @@
 using namespace std;
 
 //==============================================================================
-namespace SpatializerReverb3DTI
+namespace SpatialiserCore3DTI
 {
 	enum Parameter
 	{

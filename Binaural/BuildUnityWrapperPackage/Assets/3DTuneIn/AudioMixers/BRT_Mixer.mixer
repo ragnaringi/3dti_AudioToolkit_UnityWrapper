@@ -1,58 +1,12 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!244 &-6638725248553237813
-AudioMixerEffectController:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_EffectID: 4a30db04f691c1d48b40ece3d0a52698
-  m_EffectName: 3DTI Spatializer Core
-  m_MixLevel: 9620be3572a7e1a49a70c92e1e6fb606
-  m_Parameters:
-  - m_ParameterName: HeadRadius
-    m_GUID: 74bd4bca04cfa924499042e696a380b0
-  - m_ParameterName: ScaleFactor
-    m_GUID: 49b380971f8727848b784a02961f71ff
-  - m_ParameterName: CustomITD
-    m_GUID: f9df7eac2bc28de47b24b822be6b0a8e
-  - m_ParameterName: MAGAneAtt
-    m_GUID: cb776567ec82d024195ddf6bfebf2d0c
-  - m_ParameterName: MAGSounSpd
-    m_GUID: 4f0f040cf3b5e484887d78681264df19
-  - m_ParameterName: HADirExtL
-    m_GUID: fb583f580171fda41af43d611db994a1
-  - m_ParameterName: HADirExtR
-    m_GUID: 32be00676320da14cbd5f01b4c4deee6
-  - m_ParameterName: HADirOnL
-    m_GUID: c83ac114a6fceab4c882e3e8722f27f5
-  - m_ParameterName: HADirOnR
-    m_GUID: c57d7a4df5e257b4fac3ab89da58e612
-  - m_ParameterName: LimitOn
-    m_GUID: 3a541b449cf00e14daf119fdc4a39b97
-  - m_ParameterName: HRTFstep
-    m_GUID: 120aff9a24d85ab419bc77a38b288e16
-  - m_ParameterName: SpatHQHRTFReady
-    m_GUID: 8686e0237a7184f4ebdf3810159a9978
-  - m_ParameterName: SpatHQILDReady
-    m_GUID: a1c184f080534db4886d5be655559c72
-  - m_ParameterName: SpatHPILDReady
-    m_GUID: 56def3158bf5d9e46a8dc2bb261f920f
-  - m_ParameterName: SpatRvBRIRReady
-    m_GUID: 72a13b493e1f372439357468ac97c3f0
-  - m_ParameterName: Wetness
-    m_GUID: 70b9e1df818265641a417bd4f185550e
-  m_SendTarget: {fileID: 0}
-  m_EnableWetMix: 0
-  m_Bypass: 0
 --- !u!241 &24100000
 AudioMixerController:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: 3DTI_HAHL_Mixer
+  m_Name: BRT_Mixer
   m_OutputGroup: {fileID: 0}
   m_MasterGroup: {fileID: 24300001}
   m_Snapshots:
@@ -83,7 +37,7 @@ AudioMixerGroupController:
   m_Send: 00000000000000000000000000000000
   m_Effects:
   - {fileID: 24400002}
-  - {fileID: -6638725248553237813}
+  - {fileID: 3960920938339389013}
   m_UserColorIndex: 0
   m_Mute: 0
   m_Solo: 0
@@ -313,3 +267,19 @@ AudioMixerSnapshotController:
     4bc479ff96250054bad361801f1a2277: 50
     4f806aff3f5ea5c4bb660a7a64b4b9b5: 21
   m_TransitionOverrides: {}
+--- !u!244 &3960920938339389013
+AudioMixerEffectController:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_EffectID: 2a42c26763f0046ebb10a00cffa39466
+  m_EffectName: BRT Manager
+  m_MixLevel: 2844da3fd1d3549e985039335884c799
+  m_Parameters:
+  - m_ParameterName: Wetness
+    m_GUID: 93f64ad83dfd34f75b068b9e83e566d2
+  m_SendTarget: {fileID: 0}
+  m_EnableWetMix: 0
+  m_Bypass: 0

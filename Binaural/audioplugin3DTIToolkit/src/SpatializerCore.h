@@ -4,7 +4,6 @@
 #include <cfloat>
 #include "AudioPluginUtil.h"
 #include "AudioPluginInterface.h"
-#include "CommonUtils.h"
 #include "BRTLibrary.h"
 
 namespace BRTHelpers
@@ -16,6 +15,17 @@ struct ScopedManagerSetup
     ~ScopedManagerSetup() { manager.EndSetup(); }
     BRTBase::CBRTManager& manager;
 };
+}
+
+inline bool IsHostCompatible (UnityAudioEffectState* state)
+{
+    return state->structsize >= sizeof(UnityAudioEffectState)
+        && state->hostapiversion >= UNITY_AUDIO_PLUGIN_API_VERSION;
+}
+
+inline void WriteLog (std::string logText)
+{
+    std::cerr << logText << std::endl;
 }
 
 namespace SpatializerCore3DTI
