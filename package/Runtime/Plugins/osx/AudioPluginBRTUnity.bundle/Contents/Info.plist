@@ -4,24 +4,26 @@
 <dict>
 	<key>BuildMachineOSBuild</key>
 	<string>23H222</string>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>English</string>
 	<key>CFBundleExecutable</key>
 	<string>AudioPluginBRTUnity</string>
+	<key>CFBundleIdentifier</key>
+	<string>co.uk.reactify.brt-unity</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
-	<key>CFBundleLongVersionString</key>
-	<string></string>
+	<key>CFBundleName</key>
+	<string>AudioPluginBRTUnity</string>
 	<key>CFBundlePackageType</key>
-	<string>APPL</string>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>MacOSX</string>
 	</array>
-	<key>CSResourcesFileMapped</key>
-	<true/>
+	<key>CFBundleVersion</key>
+	<string>0</string>
 	<key>DTCompiler</key>
 	<string>com.apple.compilers.llvm.clang.1_0</string>
 	<key>DTPlatformBuild</key>

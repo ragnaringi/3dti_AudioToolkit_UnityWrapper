@@ -1,5 +1,3 @@
-# cmake -DCMAKE_BUILD_TYPE=Release -B build
-# cmake --build build
 # Android Build Command
 # cmake -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/6000.0.44f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
 #       -DANDROID_ABI=arm64-v8a \
@@ -15,10 +13,26 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(LIB_TYPE MODULE)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment version")
 
+set(PLUGIN_VERSION_MAJOR 1)
+set(PLUGIN_VERSION_MINOR 0)
+set(PLUGIN_VERSION_PATCH 0)
+
+set(PLUGIN_VERSION_SHORT "${PLUGIN_VERSION_MAJOR}.${PLUGIN_VERSION_MINOR}.${PLUGIN_VERSION_PATCH}")
+set(PLUGIN_BUILD_NUMBER "0")
+
 if(APPLE)
+    message(STATUS "PROJECT_NAME: ${PROJECT_NAME}")
+    set(CFBUNDLE_NAME ${PROJECT_NAME})
+    set(CFBUNDLE_EXECUTABLE ${PROJECT_NAME})
+    message(STATUS "CFBUNDLE_EXECUTABLE = ${CFBUNDLE_EXECUTABLE}")
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         set(LIB_TYPE STATIC)
+    else()
+        configure_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/platform/MacOS/Info.plist.in
+            ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
+        )
     endif()
 endif()
 
@@ -68,11 +82,14 @@ target_include_directories(AudioPluginBRTUnity PRIVATE
 message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 
 if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/Info.plist.in")
     set_target_properties(AudioPluginBRTUnity PROPERTIES
         BUNDLE TRUE
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_IDENTIFIER "co.uk.reactify.brt-unity"
         SUFFIX ".bundle"
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
+        VERSION ${PLUGIN_VERSION_SHORT}
     )
 
     target_link_libraries(AudioPluginBRTUnity PRIVATE
