@@ -17,6 +17,13 @@
 #include <sstream>
 #endif
 
+#ifndef _3DTI_AXIS_CONVENTION_UNITY
+#error "_3DTI_AXIS_CONVENTION_UNITY is not defined!"
+#endif
+
+#ifndef _3DTI_ANGLE_CONVENTION_LISTEN
+#error "_3DTI_ANGLE_CONVENTION_LISTEN is not defined!"
+#endif
 
 namespace BRTBinauralSpatialiser
 {

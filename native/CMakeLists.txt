@@ -21,10 +21,8 @@ set(PLUGIN_VERSION_SHORT "${PLUGIN_VERSION_MAJOR}.${PLUGIN_VERSION_MINOR}.${PLUG
 set(PLUGIN_BUILD_NUMBER "0")
 
 if(APPLE)
-    message(STATUS "PROJECT_NAME: ${PROJECT_NAME}")
     set(CFBUNDLE_NAME ${PROJECT_NAME})
     set(CFBUNDLE_EXECUTABLE ${PROJECT_NAME})
-    message(STATUS "CFBUNDLE_EXECUTABLE = ${CFBUNDLE_EXECUTABLE}")
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
     if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         set(LIB_TYPE STATIC)
@@ -33,6 +31,10 @@ if(APPLE)
             ${CMAKE_CURRENT_SOURCE_DIR}/platform/MacOS/Info.plist.in
             ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
         )
+    endif()
+elseif(ANDROID)
+    if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--section-start=.text=0x4000")
     endif()
 endif()
 
@@ -50,7 +52,7 @@ if(WIN32)
 elseif(APPLE)
     set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/osx")
 elseif(ANDROID)
-    set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/Android")
+    set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/Android/${CMAKE_ANDROID_ARCH_ABI}")
 elseif(UNIX)
     set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/Linux")
 endif()
@@ -61,7 +63,8 @@ source_group(TREE "${CMAKE_SOURCE_DIR}/src" PREFIX "Source" FILES ${PROJECT_SRC}
 
 # Collect third-party sources
 file(GLOB_RECURSE BRT_LIBRARY 
-    "${BRT_LIBRARY_DIR}/include/{*.hpp, *.h}" 
+    "${BRT_LIBRARY_DIR}/include/*.hpp"
+    "${BRT_LIBRARY_DIR}/include/*.h" 
 )
 source_group(TREE "${BRT_LIBRARY_DIR}/include/" PREFIX "BRTLibrary" FILES ${BRT_LIBRARY})
 
@@ -77,6 +80,11 @@ target_include_directories(AudioPluginBRTUnity PRIVATE
     "${BRT_LIBRARY_DIR}/include/third_party_libraries"
     "${BRT_LIBRARY_DIR}/include/third_party_libraries/eigen"
     "${BRT_LIBRARY_DIR}/include/third_party_libraries/boost_circular_buffer"
+)
+
+target_compile_definitions(AudioPluginBRTUnity PUBLIC
+    _3DTI_AXIS_CONVENTION_UNITY
+    _3DTI_ANGLE_CONVENTION_LISTEN
 )
 
 message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
