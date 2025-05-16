@@ -14,3 +14,5 @@ BRT-Unity/.vsconfig
 /BRT-Unity/ProjectSettings
 /BRT-Unity/UserSettings
 /UnityPackage/.vscode
+/BRT-Unity/Temp
+BRT-Unity/Build.apk
