@@ -6,7 +6,7 @@
     {
       "displayName": "BRT-Unity Sample",
       "description": "A sample scene for the Binaural Rendering Toolkit package.",
-      "path": "Samples~/BRT Example"
+      "path": "Samples~/BRT_Example"
     }
   ]
 }
