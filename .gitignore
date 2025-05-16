@@ -6,3 +6,11 @@ Binaural/audioplugin3DTIToolkit/ANDROID/AudioPlugin3DTIToolkit.VC.VC.opendb
 /Binaural/BuildUnityWrapperPackage/.vscode
 /Binaural/BuildUnityWrapperPackage/Logs
 /Binaural/BuildUnityWrapperPackage/UserSettings
+/native/build
+/BRT-Unity/.vscode
+BRT-Unity/.vsconfig
+/BRT-Unity/Library
+/BRT-Unity/Logs
+/BRT-Unity/ProjectSettings
+/BRT-Unity/UserSettings
+/UnityPackage/.vscode

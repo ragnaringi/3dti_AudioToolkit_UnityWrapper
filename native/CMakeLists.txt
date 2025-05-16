@@ -1,0 +1,122 @@
+# cmake -DCMAKE_BUILD_TYPE=Release -B build
+# cmake --build build
+# Android Build Command
+# cmake -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/6000.0.44f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
+#       -DANDROID_ABI=arm64-v8a \
+#       -DANDROID_PLATFORM=android-21 \
+#       -B build -DCMAKE_BUILD_TYPE=Release
+
+cmake_minimum_required(VERSION 3.15)
+project(AudioPluginBRTUnity LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF) 
+set(LIB_TYPE MODULE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment version")
+
+if(APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        set(LIB_TYPE STATIC)
+    endif()
+endif()
+
+set(BRT_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/../BRTLibrary")
+set(SOFA_LIBRARY_DIR "${CMAKE_SOURCE_DIR}/../BRTLibrary/include/third_party_libraries/libmysofa")
+set(UNITY_PACKAGE_DIR "${CMAKE_SOURCE_DIR}/../package")
+set(PLUGIN_OUTPUT_DIR "${UNITY_PACKAGE_DIR}/Runtime/Plugins")
+if(WIN32)
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+        set(ARCH_SUFFIX "ARM64")
+    elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        set(ARCH_SUFFIX "x86_64")
+    endif()
+    set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/${ARCH_SUFFIX}")
+elseif(APPLE)
+    set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/osx")
+elseif(ANDROID)
+    set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/Android")
+elseif(UNIX)
+    set(PLUGIN_OUTPUT_DIR "${PLUGIN_OUTPUT_DIR}/Linux")
+endif()
+
+# Collect project sources
+file(GLOB_RECURSE PROJECT_SRC CONFIGURE_DEPENDS src/*.cpp src/*.h)
+source_group(TREE "${CMAKE_SOURCE_DIR}/src" PREFIX "Source" FILES ${PROJECT_SRC})
+
+# Collect third-party sources
+file(GLOB_RECURSE BRT_LIBRARY 
+    "${BRT_LIBRARY_DIR}/include/{*.hpp, *.h}" 
+)
+source_group(TREE "${BRT_LIBRARY_DIR}/include/" PREFIX "BRTLibrary" FILES ${BRT_LIBRARY})
+
+# Add library
+add_library(AudioPluginBRTUnity ${LIB_TYPE}
+    ${PROJECT_SRC}
+    ${BRT_LIBRARY}
+)
+
+target_include_directories(AudioPluginBRTUnity PRIVATE 
+    ${CMAKE_SOURCE_DIR}/src
+    "${BRT_LIBRARY_DIR}/include"
+    "${BRT_LIBRARY_DIR}/include/third_party_libraries"
+    "${BRT_LIBRARY_DIR}/include/third_party_libraries/eigen"
+    "${BRT_LIBRARY_DIR}/include/third_party_libraries/boost_circular_buffer"
+)
+
+message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+
+if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set_target_properties(AudioPluginBRTUnity PROPERTIES
+        BUNDLE TRUE
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_IDENTIFIER "co.uk.reactify.brt-unity"
+        SUFFIX ".bundle"
+    )
+
+    target_link_libraries(AudioPluginBRTUnity PRIVATE
+        z
+        "${SOFA_LIBRARY_DIR}/lib/osx/universal/libmysofa.a"
+    )
+
+    add_custom_command(TARGET AudioPluginBRTUnity POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "$<TARGET_BUNDLE_DIR:AudioPluginBRTUnity>"
+            "${PLUGIN_OUTPUT_DIR}/AudioPluginBRTUnity.bundle"
+    )
+elseif(WIN32)
+    target_link_directories(AudioPluginBRTUnity PRIVATE 
+        "${SOFA_LIBRARY_DIR}/lib/vs/x64"
+    )
+    target_link_libraries(AudioPluginBRTUnity PRIVATE 
+        mysofa
+        $<$<CONFIG:Debug>:zlibstaticd>
+        $<$<CONFIG:Release>:zlibstatic>
+    )
+
+    add_custom_command(TARGET AudioPluginBRTUnity POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "$<TARGET_FILE:AudioPluginBRTUnity>"
+            "${PLUGIN_OUTPUT_DIR}/AudioPluginBRTUnity.dll"
+    )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    # Enable specific features or optimizations for Android
+    message(STATUS "Android API Level: ${ANDROID_NATIVE_API_LEVEL}")
+    message(STATUS "Android ABI: ${ANDROID_ABI}")
+
+    target_link_directories(AudioPluginBRTUnity PRIVATE 
+        "${CMAKE_SOURCE_DIR}/lib/libmysofa/android/ARM64/${CMAKE_BUILD_TYPE}"
+    )
+    target_link_libraries(AudioPluginBRTUnity PRIVATE 
+        mysofa
+        z
+    )
+
+    # Copy the .so after building
+    add_custom_command(TARGET AudioPluginBRTUnity POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PLUGIN_OUTPUT_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AudioPluginBRTUnity> ${PLUGIN_OUTPUT_DIR}
+        COMMENT "Copying AudioPluginBRTUnity.so to ${PLUGIN_OUTPUT_DIR}"
+    )
+endif()
