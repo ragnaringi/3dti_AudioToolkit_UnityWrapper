@@ -1,5 +1,5 @@
 
 
 [submodule "BRTLibrary"]
-	path = BRTLibrary
+	path = native/lib/BRTLibrary
 	url = https://github.com/GrupoDiana/BRTLibrary.git
