@@ -7,23 +7,21 @@ public static class AutoImportSample
 {
     static AutoImportSample()
     {
-        // Define paths
-        string packageSamplePath = "../package/Samples~/BRT_Example";
-        string projectSamplePath = "Assets/Samples/BRT_Example";
+        // Go up from Assets/ to repo root
+        string repoRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", ".."));
 
-        // Only copy if the sample isn't already imported
+        // Build absolute paths
+        string packageSamplePath = Path.Combine(repoRoot, "package", "Samples~", "BRT_Example");
+        string projectSamplePath = Path.Combine(Application.dataPath, "Samples", "BRT_Example");
+
         if (!Directory.Exists(projectSamplePath) && Directory.Exists(packageSamplePath))
         {
-            Debug.Log("[AutoImportSample] Copying sample from package to project...");
+            Debug.Log($"[AutoImportSample] Copying sample from {packageSamplePath} to {projectSamplePath}");
 
-            // Ensure destination directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(projectSamplePath));
-
-            // Recursively copy sample folder
             CopyDirectory(packageSamplePath, projectSamplePath);
 
             AssetDatabase.Refresh();
-
             Debug.Log("[AutoImportSample] Sample copied successfully.");
         }
     }
@@ -37,7 +35,9 @@ public static class AutoImportSample
 
         foreach (string filePath in Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories))
         {
-            File.Copy(filePath, filePath.Replace(sourceDir, destinationDir), overwrite: true);
+            string destFile = filePath.Replace(sourceDir, destinationDir);
+            Directory.CreateDirectory(Path.GetDirectoryName(destFile));
+            File.Copy(filePath, destFile, overwrite: true);
         }
     }
 }
