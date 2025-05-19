@@ -2,41 +2,80 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 
-[InitializeOnLoad]
 public static class AutoImportSample
 {
+    // This static constructor runs when the project is loaded or when scripts are recompiled
     static AutoImportSample()
     {
-        // Go up from Assets/ to repo root
-        string repoRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", ".."));
+        // Initially, you can still use this for any automatic copy if desired
+        // To ensure it runs on project load (e.g., on Unity launch), if you prefer
+        CopySampleOnProjectLoad();
+    }
 
-        // Build absolute paths
-        string packageSamplePath = Path.Combine(repoRoot, "package", "Samples~", "BRT_Example");
-        string projectSamplePath = Path.Combine(Application.dataPath, "Samples", "BRT_Example");
+    // This menu item allows you to trigger the folder copy manually
+    [MenuItem("Tools/Copy Sample From Package")]
+    private static void CopySampleFromPackage()
+    {
+        CopySampleOnProjectLoad();
+    }
 
-        if (!Directory.Exists(projectSamplePath) && Directory.Exists(packageSamplePath))
+    // The logic for copying the sample folder
+    private static void CopySampleOnProjectLoad()
+    {
+        try
         {
-            Debug.Log($"[AutoImportSample] Copying sample from {packageSamplePath} to {projectSamplePath}");
+            // Get the project root directory
+            string repoRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", ".."));
+            
+            // Define paths for the package sample and the project sample folder
+            string packageSamplePath = Path.Combine(repoRoot, "package", "Samples~", "BRT_Example");
+            string projectSamplePath = Path.Combine(Application.dataPath, "Samples", "BRT_Example");
 
-            Directory.CreateDirectory(Path.GetDirectoryName(projectSamplePath));
-            CopyDirectory(packageSamplePath, projectSamplePath);
+            // Log paths for debugging
+            Debug.Log($"[AutoImportSample] packageSamplePath: {packageSamplePath}");
+            Debug.Log($"[AutoImportSample] projectSamplePath: {projectSamplePath}");
 
-            AssetDatabase.Refresh();
-            Debug.Log("[AutoImportSample] Sample copied successfully.");
+            // Only copy if the sample doesn't already exist in the project
+            if (!Directory.Exists(projectSamplePath) && Directory.Exists(packageSamplePath))
+            {
+                Debug.Log("[AutoImportSample] Copying sample from package to project...");
+
+                // Ensure the destination directory exists
+                Directory.CreateDirectory(Path.GetDirectoryName(projectSamplePath));
+
+                // Recursively copy files from package to the project
+                CopyDirectory(packageSamplePath, projectSamplePath);
+
+                // Refresh the AssetDatabase to reflect changes
+                AssetDatabase.Refresh();
+
+                Debug.Log("[AutoImportSample] Sample copied successfully.");
+            }
+            else
+            {
+                Debug.Log("[AutoImportSample] Sample already exists or package sample not found.");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("[AutoImportSample] Error: " + ex.Message);
         }
     }
 
+    // Recursively copy a directory and its contents
     private static void CopyDirectory(string sourceDir, string destinationDir)
     {
+        // Create all directories in the destination
         foreach (string dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
         {
             Directory.CreateDirectory(dirPath.Replace(sourceDir, destinationDir));
         }
 
+        // Copy all files to the new destination
         foreach (string filePath in Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories))
         {
             string destFile = filePath.Replace(sourceDir, destinationDir);
-            Directory.CreateDirectory(Path.GetDirectoryName(destFile));
+            Directory.CreateDirectory(Path.GetDirectoryName(destFile));  // Ensure that the target directory exists
             File.Copy(filePath, destFile, overwrite: true);
         }
     }
