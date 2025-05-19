@@ -17,3 +17,5 @@ BRT-Unity/.vsconfig
 /BRT-Unity/Temp
 BRT-Unity/Build.apk
 /BRT-Unity/Assets/Samples/BRT_Example
+/BRT-Unity/Assets/XR
+BRT-Unity/Assets/XR.meta
